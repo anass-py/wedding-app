@@ -9,3 +9,4 @@ unless noted.
 | v0.1 | First working app: onboarding, Apple-Watch-style bubble wall, detail view, upload, Top 5, AI ranker, EN/FR. |
 | v0.2 | Pinterest-style masonry grid becomes the default wall; bubbles behind a ▦/⬡ toggle. Thumbnails keep their real proportions. "N new" pill when photos arrive while scrolled. |
 | v0.3 | Top 5 redesigned as an editorial page: framed hero for №1 with the AI verdict as a pull-quote, gold Roman-numeral ranked list for II–V, theme chips in gold. |
+| v0.4 | The celebration: after posting, the photo springs in inside a gold frame with a burst of sparks and "Posted!", then flies off to the wall where the new card pops in. Heart button bursts, double-tap a photo to ❤️ it (big heart flash), cards stagger in on first load, upload progress bar, haptic tick on Android. |

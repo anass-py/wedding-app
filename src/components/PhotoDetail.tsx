@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as RMouseEvent } from "react";
+import { buzz } from "../lib/haptics";
 import { useI18n } from "../i18n";
 import type { Api, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
@@ -14,7 +15,31 @@ interface Props {
 export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
   const { t, themeName } = useI18n();
   const [deleting, setDeleting] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const [flash, setFlash] = useState(0);
+  const lastTap = useRef(0);
   const mine = api.guest?.id === photo.guest_id;
+
+  const heart = () => {
+    if (!photo.hearted) {
+      setBurst((b) => b + 1);
+      buzz();
+    }
+    onHeart(photo);
+  };
+
+  // Double-tap the photo to heart it (never un-hearts).
+  const onImageClick = (e: RMouseEvent) => {
+    e.stopPropagation();
+    const now = performance.now();
+    if (now - lastTap.current < 320) {
+      lastTap.current = 0;
+      setFlash((f) => f + 1);
+      if (!photo.hearted) heart();
+    } else {
+      lastTap.current = now;
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -44,9 +69,15 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
         <img
           src={fullUrl}
           alt={photo.caption ?? ""}
-          onClick={(e) => e.stopPropagation()}
+          onClick={onImageClick}
+          draggable={false}
           style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
         />
+        {flash > 0 && (
+          <span key={flash} className="bigheart" aria-hidden="true">
+            ♥
+          </span>
+        )}
       </div>
       <div className="detail__panel">
         <div className="detail__author">
@@ -58,13 +89,18 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
             </div>
             <div className="muted small">{relativeTime(photo.created_at, t)}</div>
           </div>
-          <button
-            className={"heart" + (photo.hearted ? " heart--on" : "")}
-            onClick={() => onHeart(photo)}
-            aria-pressed={photo.hearted}
-          >
+          <button className={"heart" + (photo.hearted ? " heart--on" : "")} onClick={heart} aria-pressed={photo.hearted}>
             <span className="heart__icon">{photo.hearted ? "♥" : "♡"}</span>
             <span className="heart__count">{photo.hearts}</span>
+            {burst > 0 && (
+              <span key={burst} className="heart__burst" aria-hidden="true">
+                {Array.from({ length: 7 }, (_, i) => (
+                  <i key={i} style={{ ["--a" as string]: `${-100 + i * 33}deg` }}>
+                    ♥
+                  </i>
+                ))}
+              </span>
+            )}
           </button>
         </div>
         {photo.caption && <p className="detail__caption">{photo.caption}</p>}

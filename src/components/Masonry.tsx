@@ -9,6 +9,8 @@ interface Props {
   onSelect: (photo: Photo) => void;
   /** Photo ids to mark with a gold star (the current top 5). */
   highlight?: Set<string>;
+  /** Change this value to reveal held-back photos and scroll to the top. */
+  resetKey?: number;
 }
 
 const MIN_COLUMN_WIDTH = 180;
@@ -33,7 +35,7 @@ function distribute(photos: Photo[], cols: number): Photo[][] {
   return columns;
 }
 
-export function Masonry({ photos, urlFor, onSelect, highlight }: Props) {
+export function Masonry({ photos, urlFor, onSelect, highlight, resetKey }: Props) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(2);
@@ -69,6 +71,19 @@ export function Masonry({ photos, urlFor, onSelect, highlight }: Props) {
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  useEffect(() => {
+    if (resetKey !== undefined) reveal();
+  }, [resetKey]);
+
+  // Cards that weren't on screen last render get an entrance animation; the
+  // very first paint staggers them in.
+  const known = useRef<Set<string> | null>(null);
+  const firstPaint = known.current === null;
+  const isNew = (id: string) => firstPaint || !known.current!.has(id);
+  useEffect(() => {
+    known.current = new Set(shown.map((p) => p.id));
+  });
+
   const columns = useMemo(() => distribute(shown, cols), [shown, cols]);
 
   return (
@@ -81,8 +96,13 @@ export function Masonry({ photos, urlFor, onSelect, highlight }: Props) {
       <div ref={scrollRef} className="masonry">
         {columns.map((col, i) => (
           <div key={i} className="masonry__col">
-            {col.map((p) => (
-              <button key={p.id} className="card" onClick={() => onSelect(p)}>
+            {col.map((p, j) => (
+              <button
+                key={p.id}
+                className={"card" + (isNew(p.id) ? " card--new" : "")}
+                style={firstPaint ? { animationDelay: `${Math.min(j, 8) * 70 + i * 35}ms` } : undefined}
+                onClick={() => onSelect(p)}
+              >
                 <span className="card__img" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
                   <img src={urlFor(p.thumb_path)} alt={p.caption ?? ""} loading="lazy" decoding="async" draggable={false} />
                   {highlight?.has(p.id) && <span className="card__star">★</span>}

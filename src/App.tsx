@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
+import { Celebration } from "./components/Celebration";
 import { Honeycomb } from "./components/Honeycomb";
 import { LangToggle } from "./components/LangToggle";
 import { Masonry } from "./components/Masonry";
@@ -12,7 +13,7 @@ import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { topPhotos } from "./lib/ranking";
-import type { Guest } from "./lib/types";
+import type { Guest, Photo } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
@@ -38,6 +39,8 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState<Photo[] | null>(null);
+  const [wallReset, setWallReset] = useState(0);
 
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready");
 
@@ -67,6 +70,15 @@ export default function App() {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2500);
   }, []);
+
+  const finishCelebration = useCallback(() => {
+    setCelebrating((batch) => {
+      batch?.forEach(addPhoto);
+      return null;
+    });
+    setTab("wall");
+    setWallReset((k) => k + 1);
+  }, [addPhoto]);
 
   // Keep the detail view in sync with live heart/score updates.
   const selected = selectedId ? (photos.find((p) => p.id === selectedId) ?? null) : null;
@@ -125,7 +137,13 @@ export default function App() {
         {tab === "wall" ? (
           <>
             {view === "grid" ? (
-              <Masonry photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
+              <Masonry
+                photos={photos}
+                urlFor={api.urlFor}
+                onSelect={(p) => setSelectedId(p.id)}
+                highlight={topIds}
+                resetKey={wallReset}
+              />
             ) : (
               <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
             )}
@@ -168,11 +186,11 @@ export default function App() {
         <UploadSheet
           api={api}
           onClose={() => setUploadOpen(false)}
-          onUploaded={addPhoto}
           onError={showToast}
-          onDone={() => showToast(t("posted"))}
+          onDone={(batch) => setCelebrating(batch)}
         />
       )}
+      {celebrating && <Celebration photos={celebrating} urlFor={api.urlFor} onDone={finishCelebration} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

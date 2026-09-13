@@ -25,8 +25,11 @@ export function usePhotos(api: Api, ready: boolean) {
       });
 
     const unsubscribe = api.subscribe({
-      onPhotoInsert: (photo) =>
-        setPhotos((prev) => (prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev])),
+      onPhotoInsert: (photo) => {
+        // Our own uploads are added by the app after the celebration animation.
+        if (photo.guest_id === myId.current) return;
+        setPhotos((prev) => (prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev]));
+      },
       onPhotoDelete: (id) => setPhotos((prev) => prev.filter((p) => p.id !== id)),
       onHeart: (photoId, guestId, delta) => {
         // Our own hearts were already applied optimistically.

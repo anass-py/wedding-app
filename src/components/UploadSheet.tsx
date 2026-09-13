@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
+import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
 
 interface Props {
   api: Api;
   onClose: () => void;
-  onUploaded: (photo: Photo) => void;
   onError: (msg: string) => void;
-  onDone: (count: number) => void;
+  /** Called once with every photo that made it. */
+  onDone: (photos: Photo[]) => void;
 }
 
 interface Picked {
@@ -15,7 +16,7 @@ interface Picked {
   url: string;
 }
 
-export function UploadSheet({ api, onClose, onUploaded, onError, onDone }: Props) {
+export function UploadSheet({ api, onClose, onError, onDone }: Props) {
   const { t } = useI18n();
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -37,21 +38,20 @@ export function UploadSheet({ api, onClose, onUploaded, onError, onDone }: Props
 
   const post = async () => {
     if (picked.length === 0 || progress) return;
-    let ok = 0;
+    const done: Photo[] = [];
     for (let i = 0; i < picked.length; i++) {
       setProgress({ i: i + 1, n: picked.length });
       try {
-        const photo = await api.uploadPhoto(picked[i].file, i === 0 ? caption : undefined);
-        onUploaded(photo);
-        ok++;
+        done.push(await api.uploadPhoto(picked[i].file, i === 0 ? caption : undefined));
       } catch (e) {
         console.error(e);
         onError(t("uploadFailed"));
       }
     }
     setProgress(null);
-    if (ok > 0) {
-      onDone(ok);
+    if (done.length > 0) {
+      buzz([10, 40, 20]);
+      onDone(done);
       onClose();
     }
   };
@@ -123,6 +123,11 @@ export function UploadSheet({ api, onClose, onUploaded, onError, onDone }: Props
               onChange={(e) => setCaption(e.target.value)}
               disabled={!!progress}
             />
+            {progress && (
+              <div className="progress" aria-hidden="true">
+                <span style={{ width: `${((progress.i - 1) / progress.n) * 100 + 100 / progress.n / 2}%` }} />
+              </div>
+            )}
             <div className="sheet__actions">
               <button className="btn btn--ghost" onClick={onClose} disabled={!!progress}>
                 {t("cancel")}
