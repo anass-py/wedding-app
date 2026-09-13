@@ -5,6 +5,7 @@
 import { THEMES } from "../config";
 import { processImage } from "./image";
 import { uid } from "./uid";
+import { isVideoFile, processVideo } from "./video";
 import type { Api, Guest, Photo, RealtimeHandlers } from "./types";
 
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
@@ -58,6 +59,8 @@ export function createDemoApi(): Api {
     photos.push({
       id,
       guest_id: g.id,
+      kind: "photo",
+      duration: null,
       path: `${id}.jpg`,
       thumb_path: `${id}_t.jpg`,
       width,
@@ -138,19 +141,31 @@ export function createDemoApi(): Api {
         window.clearInterval(timer);
       };
     },
-    async uploadPhoto(file, caption) {
+    async uploadMedia(file, caption, onProgress) {
       if (!me) throw new Error("Not registered");
-      const processed = await processImage(file);
       const id = uid();
-      urls.set(`${id}.jpg`, URL.createObjectURL(processed.full));
-      urls.set(`${id}_t.jpg`, URL.createObjectURL(processed.thumb));
+      let meta: Pick<Photo, "kind" | "duration" | "path" | "width" | "height">;
+      if (isVideoFile(file)) {
+        const v = await processVideo(file);
+        urls.set(`${id}.mp4`, URL.createObjectURL(file));
+        urls.set(`${id}_t.jpg`, URL.createObjectURL(v.poster));
+        meta = { kind: "video", duration: v.duration, path: `${id}.mp4`, width: v.width, height: v.height };
+      } else {
+        const processed = await processImage(file);
+        urls.set(`${id}.jpg`, URL.createObjectURL(processed.full));
+        urls.set(`${id}_t.jpg`, URL.createObjectURL(processed.thumb));
+        meta = { kind: "photo", duration: null, path: `${id}.jpg`, width: processed.width, height: processed.height };
+      }
+      // Pretend to transfer so the progress bar can be seen.
+      for (let i = 1; i <= 5; i++) {
+        await new Promise((r) => setTimeout(r, 120));
+        onProgress?.(i / 5);
+      }
       const photo: Photo = {
         id,
         guest_id: me.id,
-        path: `${id}.jpg`,
+        ...meta,
         thumb_path: `${id}_t.jpg`,
-        width: processed.width,
-        height: processed.height,
         caption: caption?.trim() || null,
         created_at: new Date().toISOString(),
         guest: me,
@@ -160,6 +175,7 @@ export function createDemoApi(): Api {
       };
       photos = [photo, ...photos];
       // Fake the ranker: score it a few seconds later so the realtime path is exercised.
+      if (meta.kind === "video") return photo;
       setTimeout(() => {
         const s = { score: 7.5, theme: "guests", tags: ["demo"], reason: "Demo score." };
         const p = photos.find((x) => x.id === id);

@@ -14,6 +14,9 @@ export interface Score {
 export interface Photo {
   id: string;
   guest_id: string;
+  /** "photo" or "video" — for videos `path` is the video and `thumb_path` its poster frame. */
+  kind: "photo" | "video";
+  duration: number | null;
   path: string;
   thumb_path: string;
   width: number | null;
@@ -46,7 +49,8 @@ export interface Api {
   updateGuest(name: string, avatar?: Blob): Promise<Guest>;
   listPhotos(): Promise<Photo[]>;
   subscribe(handlers: RealtimeHandlers): () => void;
-  uploadPhoto(file: File, caption?: string): Promise<Photo>;
+  /** Upload a photo or a video. onProgress gets 0..1 for the transfer. */
+  uploadMedia(file: File, caption?: string, onProgress?: (fraction: number) => void): Promise<Photo>;
   setHeart(photoId: string, hearted: boolean): Promise<void>;
   deletePhoto(photo: Photo): Promise<void>;
   urlFor(path: string): string;

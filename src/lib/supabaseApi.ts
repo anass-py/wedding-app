@@ -1,17 +1,20 @@
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
 import { processImage } from "./image";
 import { uid } from "./uid";
+import { isVideoFile, processVideo, videoExt } from "./video";
 import type { Api, Guest, Photo, RealtimeHandlers, Score } from "./types";
 
 const BUCKET = "photos";
 
 const PHOTO_SELECT =
-  "id, guest_id, path, thumb_path, width, height, caption, created_at, " +
+  "id, guest_id, kind, duration, path, thumb_path, width, height, caption, created_at, " +
   "guest:guests(id, name, avatar_path), hearts(guest_id), photo_scores(score, theme, tags, reason)";
 
 interface PhotoRow {
   id: string;
   guest_id: string;
+  kind: "photo" | "video" | null;
+  duration: number | string | null;
   path: string;
   thumb_path: string;
   width: number | null;
@@ -47,6 +50,8 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     return {
       id: r.id,
       guest_id: r.guest_id,
+      kind: r.kind === "video" ? "video" : "photo",
+      duration: r.duration == null ? null : Number(r.duration),
       path: r.path,
       thumb_path: r.thumb_path,
       width: r.width,
@@ -69,13 +74,37 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     return anon.session;
   }
 
-  async function upload(path: string, blob: Blob) {
-    const { error } = await sb.storage.from(BUCKET).upload(path, blob, {
-      contentType: "image/jpeg",
-      cacheControl: "31536000",
-      upsert: false,
+  /**
+   * Same wire format as storage-js (multipart with a cacheControl field), but
+   * through XHR so we can show real upload progress for big videos.
+   */
+  async function upload(path: string, blob: Blob, onProgress?: (f: number) => void) {
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("No session");
+    const type = blob.type || "application/octet-stream";
+    const form = new FormData();
+    form.append("cacheControl", "31536000");
+    form.append("", new File([blob], path.split("/").pop() ?? "file", { type }));
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${url}/storage/v1/object/${BUCKET}/${path}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.setRequestHeader("apikey", anonKey);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress?.(e.loaded / e.total);
+      };
+      xhr.onload = () =>
+        xhr.status >= 200 && xhr.status < 300
+          ? resolve()
+          : reject(new Error(`Upload rejected (${xhr.status}) ${xhr.responseText.slice(0, 160)}`));
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.ontimeout = () => reject(new Error("Upload timed out"));
+      xhr.timeout = 10 * 60_000;
+      xhr.send(form);
     });
-    if (error) throw error;
+    onProgress?.(1);
   }
 
   async function fetchOne(id: string): Promise<Photo | null> {
@@ -172,23 +201,26 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       };
     },
 
-    async uploadPhoto(file, caption) {
+    async uploadMedia(file, caption, onProgress) {
       if (!guest || !authId) throw new Error("Not registered");
-      const processed = await processImage(file);
       const base = `${authId}/${uid()}`;
-      const path = `${base}.jpg`;
       const thumb_path = `${base}_t.jpg`;
-      await Promise.all([upload(path, processed.full), upload(thumb_path, processed.thumb)]);
+      let row: Record<string, unknown>;
+      if (isVideoFile(file)) {
+        const v = await processVideo(file);
+        const path = `${base}.${videoExt(file)}`;
+        await upload(thumb_path, v.poster);
+        await upload(path, file, onProgress);
+        row = { kind: "video", duration: Math.round(v.duration * 10) / 10, path, thumb_path, width: v.width, height: v.height };
+      } else {
+        const processed = await processImage(file);
+        const path = `${base}.jpg`;
+        await Promise.all([upload(path, processed.full, onProgress), upload(thumb_path, processed.thumb)]);
+        row = { kind: "photo", path, thumb_path, width: processed.width, height: processed.height };
+      }
       const { data, error } = await sb
         .from("photos")
-        .insert({
-          guest_id: guest.id,
-          path,
-          thumb_path,
-          width: processed.width,
-          height: processed.height,
-          caption: caption?.trim() || null,
-        })
+        .insert({ guest_id: guest.id, caption: caption?.trim() || null, ...row })
         .select("id")
         .single();
       if (error) throw error;

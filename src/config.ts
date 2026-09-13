@@ -29,6 +29,9 @@ export const THEMES = [
 ] as const;
 export type Theme = (typeof THEMES)[number];
 
+/** Video limits enforced in the browser before upload. Supabase's free tier caps files at 50 MB. */
+export const MEDIA = { MAX_VIDEO_MB: 50, MAX_VIDEO_SECONDS: 90 };
+
 /** How many photos the "Top" tab shows per theme. */
 export const TOP_N = 5;
 

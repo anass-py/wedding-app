@@ -275,10 +275,10 @@ img { display: block; }
   padding: calc(env(safe-area-inset-top) + 56px) 12px 12px;
 }
 .detail__slide { position: relative; max-width: 100%; max-height: 100%; display: grid; place-items: center; will-change: transform; }
-.detail__slide img { max-width: 100%; max-height: calc(100dvh - 300px); object-fit: contain; border-radius: 12px; animation: zoomin 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.detail__slide img, .detail__slide video { max-width: 100%; max-height: calc(100dvh - 300px); object-fit: contain; border-radius: 12px; background: #000; animation: zoomin 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes zoomin { from { transform: scale(0.92); opacity: 0; } }
-.detail__slide--left img { animation: slidel 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.detail__slide--right img { animation: slider 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.detail__slide--left img, .detail__slide--left video { animation: slidel 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.detail__slide--right img, .detail__slide--right video { animation: slider 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes slidel { from { transform: translateX(80px); opacity: 0; } }
 @keyframes slider { from { transform: translateX(-80px); opacity: 0; } }
 .detail__edge { position: absolute; top: 40%; width: 3px; height: 20%; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
@@ -334,7 +334,9 @@ img { display: block; }
   font-size: 17px; font-weight: 500; text-align: left;
 }
 .bigbtn:active { background: #2f2a25; }
-.bigbtn__icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(217, 181, 109, 0.14); color: var(--gold); }
+.bigbtn__icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(217, 181, 109, 0.14); color: var(--gold); flex-shrink: 0; }
+.bigbtn__text { display: grid; gap: 2px; }
+.bigbtn__hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 .sheet__actions { display: flex; gap: 10px; }
 .progress { height: 4px; border-radius: 2px; background: var(--bg3); overflow: hidden; }
 .progress span { display: block; height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s ease; }
@@ -342,7 +344,9 @@ img { display: block; }
 
 .picked { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .picked__item { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; }
-.picked__item img { width: 100%; height: 100%; object-fit: cover; }
+.picked__item img, .picked__item video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.picked__play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; display: grid; place-items: center; pointer-events: none; }
+.card__video { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 11px; font-weight: 600; backdrop-filter: blur(6px); }
 .picked__remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0, 0, 0, 0.65); display: grid; place-items: center; }
 .picked__add { aspect-ratio: 1; border-radius: 10px; border: 1px dashed var(--ring); color: var(--muted); font-size: 13px; }
 
@@ -458,6 +462,7 @@ img { display: block; }
   animation: fade 1.4s ease;
 }
 .tv__slide { position: absolute; inset: 0; display: grid; grid-template: 100% / 100%; place-items: center; padding: 8vh 21vw; animation: tvin 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tv__slide video { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 0 0 1px rgba(217, 181, 109, 0.5), 0 40px 120px rgba(0, 0, 0, 0.7); background: #000; }
 .tv__slide img {
   max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 14px;
   box-shadow: 0 0 0 1px rgba(217, 181, 109, 0.5), 0 40px 120px rgba(0, 0, 0, 0.7); animation: kenburns 9s linear both;

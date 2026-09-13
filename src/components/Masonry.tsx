@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { Photo } from "../lib/types";
+import { formatDuration } from "../lib/video";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 
@@ -135,6 +136,11 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
               >
                 <span className="card__img" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
                   <FadeImg src={urlFor(p.thumb_path)} alt={p.caption ?? ""} />
+                  {p.kind === "video" && (
+                    <span className="card__video">
+                      <Icon name="play" size={11} fill strokeWidth={0} /> {formatDuration(p.duration)}
+                    </span>
+                  )}
                   {highlight?.has(p.id) && (
                     <span className="card__star">
                       <Icon name="star" size={13} fill strokeWidth={0} />

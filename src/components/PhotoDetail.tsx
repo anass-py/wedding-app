@@ -3,6 +3,7 @@ import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
+import { formatDuration } from "../lib/video";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 
@@ -73,7 +74,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   // Double-tap the photo to heart it (never un-hearts).
   const onImageClick = (e: RMouseEvent) => {
     e.stopPropagation();
-    if (suppressClick.current) return;
+    if (suppressClick.current || photo.kind === "video") return;
     const now = performance.now();
     if (now - lastTap.current < 320) {
       lastTap.current = 0;
@@ -131,8 +132,9 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     setSaving(true);
     try {
       const blob = await (await fetch(fullUrl)).blob();
-      const name = `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.jpg`;
-      const file = new File([blob], name, { type: blob.type || "image/jpeg" });
+      const ext = photo.kind === "video" ? (photo.path.match(/\.(\w+)$/)?.[1] ?? "mp4") : "jpg";
+      const name = `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.${ext}`;
+      const file = new File([blob], name, { type: blob.type || (photo.kind === "video" ? "video/mp4" : "image/jpeg") });
       if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: WEDDING.couple });
       } else {
@@ -188,13 +190,25 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
         onPointerCancel={onPointerUp}
       >
         <div ref={slideRef} key={photo.id} className={"detail__slide" + (dir ? ` detail__slide--${dir}` : "")}>
-          <img
-            src={fullUrl}
-            alt={photo.caption ?? ""}
-            onClick={onImageClick}
-            draggable={false}
-            style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
-          />
+          {photo.kind === "video" ? (
+            <video
+              src={fullUrl}
+              poster={api.urlFor(photo.thumb_path)}
+              controls
+              playsInline
+              preload="metadata"
+              onClick={(e) => e.stopPropagation()}
+              style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
+            />
+          ) : (
+            <img
+              src={fullUrl}
+              alt={photo.caption ?? ""}
+              onClick={onImageClick}
+              draggable={false}
+              style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
+            />
+          )}
           {flash?.photoId === photo.id && (
             <span key={flash.n} className="bigheart" aria-hidden="true">
               ♥
@@ -212,7 +226,10 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
               <span className="muted">{t("by")} </span>
               {photo.guest.name}
             </div>
-            <div className="muted small">{relativeTime(photo.created_at, t)}</div>
+            <div className="muted small">
+              {relativeTime(photo.created_at, t)}
+              {photo.kind === "video" && ` · ▶ ${formatDuration(photo.duration)}`}
+            </div>
           </div>
           <button className={"heart" + (photo.hearted ? " heart--on" : "")} onClick={heart} aria-pressed={photo.hearted}>
             <span className="heart__icon">

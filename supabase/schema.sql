@@ -27,6 +27,10 @@ create table if not exists public.photos (
 );
 create index if not exists photos_created_at_idx on public.photos (created_at desc);
 
+-- v1.2: videos. (alter … if not exists so re-running on an older database upgrades it)
+alter table public.photos add column if not exists kind text not null default 'photo' check (kind in ('photo', 'video'));
+alter table public.photos add column if not exists duration real;
+
 create table if not exists public.hearts (
   photo_id    uuid not null references public.photos(id) on delete cascade,
   guest_id    uuid not null references public.guests(id) on delete cascade,
@@ -99,8 +103,10 @@ end $$;
 
 -- ── Storage ─────────────────────────────────────────────────────────────────
 -- Public bucket: photos are served by unguessable UUID URLs (no listing).
+-- 50 MB is the per-file cap on Supabase's free tier; raise it on Pro if you want longer videos.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('photos', 'photos', true, 15728640, array['image/jpeg', 'image/png', 'image/webp'])
+values ('photos', 'photos', true, 52428800,
+        array['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm', 'video/3gpp', 'video/x-m4v'])
 on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "photos bucket: read"          on storage.objects;

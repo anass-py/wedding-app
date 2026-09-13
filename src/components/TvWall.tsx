@@ -6,6 +6,7 @@ import type { Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
 
 const SLIDE_MS = 7000;
+const VIDEO_MAX_MS = 20_000;
 const LOOP_SIZE = 80; // newest N photos cycle; new arrivals jump the queue
 
 interface Slide {
@@ -65,24 +66,30 @@ export function TvWall() {
     };
   }, [api]);
 
+  const advance = () => {
+    const fresh = queue.current.shift();
+    if (fresh) {
+      setSlide({ photo: fresh, isNew: true });
+      return;
+    }
+    const loop = photosRef.current.slice(0, LOOP_SIZE);
+    if (loop.length === 0) return;
+    cursor.current = (cursor.current + 1) % loop.length;
+    setSlide({ photo: loop[cursor.current], isNew: false });
+  };
+
+  // Each slide schedules the next one: photos stay SLIDE_MS, videos play out (capped).
   useEffect(() => {
     if (paused) return;
-    const tick = () => {
-      const fresh = queue.current.shift();
-      if (fresh) {
-        setSlide({ photo: fresh, isNew: true });
-        return;
-      }
-      const loop = photosRef.current.slice(0, LOOP_SIZE);
-      if (loop.length === 0) return;
-      cursor.current = (cursor.current + 1) % loop.length;
-      setSlide({ photo: loop[cursor.current], isNew: false });
-    };
-    if (!slide) tick();
-    const id = window.setInterval(tick, SLIDE_MS);
-    return () => window.clearInterval(id);
+    if (!slide) {
+      advance();
+      return;
+    }
+    const ms = slide.photo.kind === "video" ? Math.min(VIDEO_MAX_MS, ((slide.photo.duration ?? 10) + 0.5) * 1000) : SLIDE_MS;
+    const id = window.setTimeout(advance, ms);
+    return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused, photos.length > 0]);
+  }, [paused, slide, photos.length > 0]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -100,7 +107,11 @@ export function TvWall() {
         <>
           <div key={"bg" + slide.photo.id} className="tv__bg" style={{ backgroundImage: `url(${api.urlFor(slide.photo.thumb_path)})` }} />
           <div key={slide.photo.id} className="tv__slide">
-            <img src={api.urlFor(slide.photo.path)} alt="" />
+            {slide.photo.kind === "video" ? (
+              <video src={api.urlFor(slide.photo.path)} poster={api.urlFor(slide.photo.thumb_path)} autoPlay muted playsInline onEnded={advance} />
+            ) : (
+              <img src={api.urlFor(slide.photo.path)} alt="" />
+            )}
           </div>
           <div key={"cap" + slide.photo.id} className="tv__caption">
             <Avatar guest={slide.photo.guest} urlFor={api.urlFor} size={52} />

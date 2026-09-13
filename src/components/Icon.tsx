@@ -45,6 +45,13 @@ const paths: Record<string, ReactNode> = {
       <path d="M11 18.5h2" />
     </>
   ),
+  play: <path d="M7 4.5v15l12-7.5z" />,
+  video: (
+    <>
+      <rect x="3" y="6.5" width="13" height="11" rx="2" />
+      <path d="M16 10.5l5-2.5v8l-5-2.5" />
+    </>
+  ),
   user: (
     <>
       <circle cx="12" cy="8.5" r="3.8" />

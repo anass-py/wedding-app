@@ -62,6 +62,22 @@ Then make the QR code for the tables:
 npm run qr -- https://something.vercel.app     # writes qr.png + qr.svg
 ```
 
+## 3a. Videos
+
+Guests can record or pick videos too (up to 90 s / 50 MB — limits in `src/config.ts`). Phones
+already compress on pick (an iPhone re-encodes to H.264 when you choose from Photos), the app
+grabs a poster frame in the browser and uploads with a real progress bar.
+
+Two things to know:
+
+- **Storage.** The free Supabase tier is 1 GB and caps files at 50 MB. A wedding with videos
+  easily reaches 5–20 GB, so switch the project to **Pro ($25 for the month, 100 GB)** in
+  *Project Settings → Billing* before the day, and raise the bucket's `file_size_limit` in
+  `supabase/schema.sql` if you want longer clips.
+- **Playback everywhere.** An iPhone `.mov` won't play on Android. `npm run worker` (below)
+  converts every new video to a universal MP4 within a minute; until then it plays on the same
+  kind of phone it came from.
+
 ## 3b. The live wall on the venue screen
 
 Plug a laptop into the TV/projector and open **`https://your-url/tv`** in full screen (F11).
@@ -79,10 +95,14 @@ Add to `.env`: `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API → *servic
 never put it in the app) and `ANTHROPIC_API_KEY` (https://console.anthropic.com).
 
 ```bash
+npm run worker          # ← leave this running on the wedding day: scores photos + converts videos every 60 s
 npm run rank            # score everything new, once
-npm run rank:watch      # keep running; checks every 60 s
 npm run rank -- --all   # re-score everything (after changing the prompt)
+npm run transcode       # convert new videos once
 ```
+
+ffmpeg comes with `npm install` (the `ffmpeg-static` package). If `node_modules/ffmpeg-static/ffmpeg`
+is missing, run `npm rebuild ffmpeg-static`, or install ffmpeg yourself and set `FFMPEG_PATH`.
 
 Cost: roughly **1 cent per photo** with the default `claude-opus-5` (a 500-photo wedding ≈ $5).
 Set `RANK_MODEL=claude-sonnet-5` in `.env` for about a third of that.
@@ -100,7 +120,8 @@ Themes live in both `src/config.ts` and `scripts/rank.ts` — keep them in sync.
 - [ ] `src/config.ts` has your names; deployed; QR printed on cards for the tables.
 - [ ] Anonymous sign-ins enabled and the rate limit raised (step 2.4).
 - [ ] Tested from two phones: join, post from camera, post from gallery, heart, see it appear live on the other phone.
-- [ ] Ranker running (`npm run rank:watch` on a laptop at home, or the GitHub Action enabled).
+- [ ] `npm run worker` running on a laptop at home (or the GitHub Action enabled) — scores photos, converts videos.
+- [ ] Supabase on Pro if guests will post videos; anonymous rate limit raised.
 - [ ] Ask the venue for the WiFi password to put on the cards — uploads are much faster than on cellular.
 
 ## How it's built

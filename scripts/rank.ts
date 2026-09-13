@@ -12,6 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 // Keep in sync with src/config.ts THEMES.
@@ -71,7 +72,7 @@ interface PhotoRow {
 }
 
 async function unscoredPhotos(all: boolean): Promise<PhotoRow[]> {
-  const { data: photos, error } = await supabase.from("photos").select("id, path, caption").order("created_at");
+  const { data: photos, error } = await supabase.from("photos").select("id, path, caption").eq("kind", "photo").order("created_at");
   if (error) throw error;
   if (all) return photos;
   const { data: scored, error: e2 } = await supabase.from("photo_scores").select("photo_id");
@@ -122,7 +123,7 @@ async function upsert(photo_id: string, v: z.infer<typeof Verdict>) {
   if (error) throw error;
 }
 
-async function runOnce(all: boolean): Promise<number> {
+export async function rankOnce(all = false): Promise<number> {
   const todo = await unscoredPhotos(all);
   if (todo.length === 0) return 0;
   console.log(`Scoring ${todo.length} photo(s) with ${MODEL}…`);
@@ -157,7 +158,7 @@ async function main() {
   const watch = args.has("--watch");
   const all = args.has("--all");
   do {
-    const n = await runOnce(all && !watch);
+    const n = await rankOnce(all && !watch);
     if (watch) {
       if (n === 0) process.stdout.write(".");
       await new Promise((r) => setTimeout(r, 60_000));
@@ -165,7 +166,9 @@ async function main() {
   } while (watch);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
