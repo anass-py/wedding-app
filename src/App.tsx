@@ -7,8 +7,11 @@ import { LangToggle } from "./components/LangToggle";
 import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
 import { PhotoDetail } from "./components/PhotoDetail";
+import { ProfileSheet } from "./components/ProfileSheet";
+import { SkeletonGrid } from "./components/Skeleton";
 import { TopPhotos } from "./components/TopPhotos";
 import { UploadSheet } from "./components/UploadSheet";
+import { Welcome } from "./components/Welcome";
 import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
@@ -33,7 +36,9 @@ export default function App() {
   const { t } = useI18n();
   const [stage, setStage] = useState<Stage>("loading");
   const [fatal, setFatal] = useState<string | null>(null);
-  const [, setGuest] = useState<Guest | null>(null);
+  const [guest, setGuest] = useState<Guest | null>(null);
+  const [welcome, setWelcome] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("wall");
   const [view, setViewState] = useState<View>(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,7 +89,15 @@ export default function App() {
   const selected = selectedId ? (photos.find((p) => p.id === selectedId) ?? null) : null;
   const topIds = useMemo(() => new Set(topPhotos(photos, "all").map((p) => p.id)), [photos]);
 
-  if (stage === "loading") return <div className="center muted">{t("connecting")}</div>;
+  if (stage === "loading") {
+    return (
+      <div className="splash">
+        <div className="splash__mark">✦</div>
+        <div className="display">{WEDDING.couple}</div>
+        <div className="muted small">{t("connecting")}</div>
+      </div>
+    );
+  }
   if (stage === "error") return <div className="center error">{fatal}</div>;
   if (stage === "onboarding") {
     return (
@@ -92,6 +105,7 @@ export default function App() {
         api={api}
         onJoined={(g) => {
           setGuest(g);
+          setWelcome(true);
           setStage("ready");
         }}
       />
@@ -128,7 +142,11 @@ export default function App() {
             </div>
           )}
           <LangToggle />
-          {api.guest && <Avatar guest={api.guest} urlFor={api.urlFor} size={32} />}
+          {guest && (
+            <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
+              <Avatar guest={guest} urlFor={api.urlFor} size={32} />
+            </button>
+          )}
         </div>
       </header>
 
@@ -136,7 +154,9 @@ export default function App() {
         {error && <div className="banner banner--error">{error}</div>}
         {tab === "wall" ? (
           <>
-            {view === "grid" ? (
+            {loading && photos.length === 0 ? (
+              <SkeletonGrid />
+            ) : view === "grid" ? (
               <Masonry
                 photos={photos}
                 urlFor={api.urlFor}
@@ -149,6 +169,9 @@ export default function App() {
             )}
             {!loading && photos.length === 0 && (
               <div className="empty">
+                <div className="ornament">
+                  <span>✦</span>
+                </div>
                 <div className="empty__title">{t("emptyWall")}</div>
                 <div className="muted">{t("emptyWallHint")}</div>
               </div>
@@ -161,7 +184,7 @@ export default function App() {
 
       <nav className="nav">
         <button className={"nav__btn" + (tab === "wall" ? " nav__btn--on" : "")} onClick={() => setTab("wall")}>
-          <span className="nav__icon">⬡</span>
+          <span className="nav__icon">▦</span>
           {t("wall")}
         </button>
         <button className="fab" onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
@@ -193,6 +216,17 @@ export default function App() {
         />
       )}
       {celebrating && <Celebration photos={celebrating} urlFor={api.urlFor} onDone={finishCelebration} />}
+      {welcome && guest && <Welcome name={guest.name} onDone={() => setWelcome(false)} />}
+      {profileOpen && guest && (
+        <ProfileSheet
+          api={api}
+          guest={guest}
+          photos={photos}
+          onClose={() => setProfileOpen(false)}
+          onUpdated={setGuest}
+          onToast={showToast}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

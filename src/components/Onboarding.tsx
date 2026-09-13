@@ -49,6 +49,9 @@ export function Onboarding({ api, onJoined }: Props) {
       <div className="onboarding__card">
         <p className="eyebrow">{t("welcome")}</p>
         <h1 className="display">{WEDDING.couple}</h1>
+        <div className="ornament onboarding__ornament">
+          <span>✦</span>
+        </div>
         {WEDDING.hashtag && <p className="muted">{WEDDING.hashtag}</p>}
         <p className="onboarding__intro">{t("onboardingIntro")}</p>
 

@@ -119,6 +119,19 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return data;
     },
 
+    async updateGuest(name, avatar) {
+      if (!guest || !authId) throw new Error("Not registered");
+      const patch: { name: string; avatar_path?: string } = { name: name.trim() };
+      if (avatar) {
+        patch.avatar_path = `${authId}/avatar-${Date.now()}.jpg`;
+        await upload(patch.avatar_path, avatar);
+      }
+      const { data, error } = await sb.from("guests").update(patch).eq("id", guest.id).select("id, name, avatar_path").single();
+      if (error) throw error;
+      guest = data;
+      return data;
+    },
+
     async listPhotos() {
       const { data, error } = await sb
         .from("photos")

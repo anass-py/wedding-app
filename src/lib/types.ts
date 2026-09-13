@@ -43,6 +43,7 @@ export interface Api {
   /** Ensure an auth session; return the guest profile if one exists on this device. */
   init(): Promise<Guest | null>;
   createGuest(name: string, avatar?: Blob): Promise<Guest>;
+  updateGuest(name: string, avatar?: Blob): Promise<Guest>;
   listPhotos(): Promise<Photo[]>;
   subscribe(handlers: RealtimeHandlers): () => void;
   uploadPhoto(file: File, caption?: string): Promise<Photo>;

@@ -21,6 +21,7 @@ body {
   color: var(--text);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: lining-nums;
   overscroll-behavior: none;
   position: fixed;
   inset: 0;
@@ -51,6 +52,8 @@ img { display: block; }
 .header__title { font-family: var(--serif); font-size: 24px; font-weight: 600; line-height: 1; }
 .header__sub { font-size: 12px; margin-top: 3px; }
 .header__right { display: flex; align-items: center; gap: 12px; }
+.header__me { border-radius: 50%; box-shadow: 0 0 0 2px var(--ring); transition: transform 0.15s; }
+.header__me:active { transform: scale(0.92); }
 .main { flex: 1; position: relative; min-height: 0; }
 
 .banner { background: var(--gold2); color: #1a1408; font-size: 12px; text-align: center; padding: 6px 12px; }
@@ -107,7 +110,8 @@ img { display: block; }
 .honeycomb.settling .bubble { transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s; }
 
 .empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 6px; padding: 32px; pointer-events: none; }
-.empty__title { font-family: var(--serif); font-size: 26px; }
+.empty__title { font-family: var(--serif); font-size: 26px; margin-top: 6px; }
+.empty .ornament { width: 160px; margin: 0 auto 8px; }
 
 /* ── Masonry grid ──────────────────────────────────────────── */
 .masonry-wrap { position: absolute; inset: 0; }
@@ -307,6 +311,29 @@ img { display: block; }
 .btn--ghost { background: var(--bg3); color: var(--text); }
 .btn--block { width: 100%; }
 
+/* ── Splash / skeleton ─────────────────────────────────────── */
+.splash { height: 100%; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; animation: fade 0.4s; }
+.splash__mark { color: var(--gold); font-size: 22px; animation: pulse 1.6s infinite; }
+.masonry--skeleton { pointer-events: none; }
+.skel { border-radius: 14px; background: linear-gradient(100deg, var(--bg2) 30%, var(--bg3) 50%, var(--bg2) 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite linear; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+/* ── Profile sheet ─────────────────────────────────────────── */
+.profile__head { display: flex; align-items: center; justify-content: space-between; }
+.profile__avatar { display: grid; justify-items: center; gap: 6px; justify-self: center; }
+.profile__avatar .avatar { box-shadow: 0 0 0 2px var(--gold); }
+.profile__change { font-size: 12px; color: var(--muted); }
+.profile__stats { display: flex; justify-content: center; gap: 36px; }
+.profile__stats div { display: grid; justify-items: center; }
+.profile__stats b { font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1; }
+.profile__stats span { font-size: 12px; color: var(--muted); }
+.install { background: var(--bg3); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.install__title { font-size: 14px; }
+
+/* ── Welcome ───────────────────────────────────────────────── */
+.welcome__mark { font-size: 54px; color: var(--gold); animation: popin 0.7s cubic-bezier(0.2, 1.5, 0.3, 1) both; }
+.welcome__title { font-size: 38px; text-align: center; padding: 0 24px; }
+
 /* ── Onboarding ────────────────────────────────────────────── */
 .onboarding {
   height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -315,6 +342,16 @@ img { display: block; }
 }
 .onboarding__lang { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 16px; }
 .onboarding__card { width: 100%; max-width: 380px; display: grid; gap: 16px; text-align: center; }
+.onboarding__card > * { animation: rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.onboarding__card > :nth-child(1) { animation-delay: 0.05s; }
+.onboarding__card > :nth-child(2) { animation-delay: 0.12s; }
+.onboarding__card > :nth-child(3) { animation-delay: 0.19s; }
+.onboarding__card > :nth-child(4) { animation-delay: 0.26s; }
+.onboarding__card > :nth-child(5) { animation-delay: 0.33s; }
+.onboarding__card > :nth-child(6) { animation-delay: 0.4s; }
+.onboarding__card > :nth-child(7) { animation-delay: 0.47s; }
+.onboarding__card > :nth-child(8) { animation-delay: 0.54s; }
+.onboarding__ornament { width: 140px; margin: -4px auto; }
 .onboarding__intro { color: var(--muted); margin: 0 0 8px; }
 .selfie { display: grid; justify-items: center; gap: 8px; }
 .selfie img, .selfie__icon {

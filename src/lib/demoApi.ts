@@ -105,6 +105,21 @@ export function createDemoApi(): Api {
       }
       return me;
     },
+    async updateGuest(name, avatar) {
+      if (!me) throw new Error("Not registered");
+      me = { ...me, name: name.trim() };
+      if (avatar) {
+        urls.set("me-avatar.jpg", URL.createObjectURL(avatar));
+        me.avatar_path = "me-avatar.jpg";
+      }
+      photos = photos.map((p) => (p.guest_id === me!.id ? { ...p, guest: me! } : p));
+      try {
+        localStorage.setItem("wedding.demo.guest", JSON.stringify({ ...me, avatar_path: null }));
+      } catch {
+        /* ignore */
+      }
+      return me;
+    },
     async listPhotos() {
       return photos.map((p) => ({ ...p }));
     },
