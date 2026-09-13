@@ -1,0 +1,9 @@
+node_modules
+dist
+dev-dist
+.env
+.env.*
+!.env.example
+qr.png
+qr.svg
+.DS_Store

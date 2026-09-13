@@ -1,0 +1,34 @@
+{
+  "name": "wedding-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.scripts.json && vite build",
+    "preview": "vite preview --host",
+    "rank": "node --env-file-if-exists=.env --import tsx scripts/rank.ts",
+    "rank:watch": "node --env-file-if-exists=.env --import tsx scripts/rank.ts --watch",
+    "qr": "node --import tsx scripts/qr.ts",
+    "icons": "python3 scripts/make_icons.py"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "@types/node": "^24.5.2",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "qrcode": "^1.5.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vite-plugin-pwa": "^1.0.3",
+    "zod": "^4.1.9"
+  }
+}
