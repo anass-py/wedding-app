@@ -176,8 +176,10 @@ export default function App() {
       {selected && (
         <PhotoDetail
           photo={selected}
+          photos={photos}
           api={api}
           onClose={() => setSelectedId(null)}
+          onNavigate={setSelectedId}
           onHeart={toggleHeart}
           onDelete={removePhoto}
         />

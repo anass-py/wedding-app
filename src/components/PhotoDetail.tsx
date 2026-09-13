@@ -1,24 +1,64 @@
-import { useEffect, useRef, useState, type MouseEvent as RMouseEvent } from "react";
-import { buzz } from "../lib/haptics";
+import { useEffect, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
+import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
+import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
 
 interface Props {
   photo: Photo;
+  /** The list to swipe through (the photo must be in it). */
+  photos: Photo[];
   api: Api;
   onClose: () => void;
+  onNavigate: (id: string) => void;
   onHeart: (photo: Photo) => void;
   onDelete: (photo: Photo) => Promise<void>;
 }
 
-export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
+const SWIPE_PX = 70;
+const CLOSE_PX = 110;
+
+export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete }: Props) {
   const { t, themeName } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [burst, setBurst] = useState(0);
   const [flash, setFlash] = useState(0);
+  const [dir, setDir] = useState<"left" | "right" | null>(null);
   const lastTap = useRef(0);
+  const slideRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+
+  const index = photos.findIndex((p) => p.id === photo.id);
+  const prev = index > 0 ? photos[index - 1] : null;
+  const next = index >= 0 && index < photos.length - 1 ? photos[index + 1] : null;
   const mine = api.guest?.id === photo.guest_id;
+  const fullUrl = api.urlFor(photo.path);
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const go = (target: Photo | null, d: "left" | "right") => {
+    if (!target) return;
+    setDir(d);
+    onNavigate(target.id);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") go(next, "left");
+      if (e.key === "ArrowLeft") go(prev, "right");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  // Preload neighbours so swiping feels instant.
+  useEffect(() => {
+    [prev, next].forEach((p) => {
+      if (p) new Image().src = api.urlFor(p.path);
+    });
+  }, [prev, next, api]);
 
   const heart = () => {
     if (!photo.hearted) {
@@ -31,6 +71,7 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
   // Double-tap the photo to heart it (never un-hearts).
   const onImageClick = (e: RMouseEvent) => {
     e.stopPropagation();
+    if (suppressClick.current) return;
     const now = performance.now();
     if (now - lastTap.current < 320) {
       lastTap.current = 0;
@@ -41,11 +82,55 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
     }
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const onPointerDown = (e: RPointerEvent) => {
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+    if (slideRef.current) slideRef.current.style.transition = "none";
+  };
+  const onPointerMove = (e: RPointerEvent) => {
+    const d = drag.current;
+    const el = slideRef.current;
+    if (!d || d.id !== e.pointerId || !el) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) > 8) d.moved = true;
+    if (!d.moved) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const resist = (dx < 0 && !next) || (dx > 0 && !prev) ? 0.35 : 0.95;
+      el.style.transform = `translateX(${dx * resist}px)`;
+      el.style.opacity = "1";
+    } else if (dy > 0) {
+      el.style.transform = `translateY(${dy}px) scale(${1 - Math.min(0.15, dy / 900)})`;
+      el.style.opacity = String(1 - Math.min(0.5, dy / 500));
+    }
+  };
+  const onPointerUp = (e: RPointerEvent) => {
+    const d = drag.current;
+    const el = slideRef.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    if (!d.moved || !el) return;
+    suppressClick.current = true;
+    window.setTimeout(() => (suppressClick.current = false), 350);
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx < -SWIPE_PX && next) return go(next, "left");
+      if (dx > SWIPE_PX && prev) return go(prev, "right");
+    } else if (dy > CLOSE_PX) {
+      return onClose();
+    }
+    el.style.transition = "transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s";
+    el.style.transform = "";
+    el.style.opacity = "";
+  };
+
+  const share = async () => {
+    try {
+      await navigator.share({ title: WEDDING.couple, text: `${photo.guest.name} · ${WEDDING.couple}`, url: fullUrl });
+    } catch {
+      /* cancelled */
+    }
+  };
 
   const remove = async () => {
     if (!window.confirm(t("confirmDelete"))) return;
@@ -58,26 +143,38 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
     }
   };
 
-  const fullUrl = api.urlFor(photo.path);
-
   return (
     <div className="detail" role="dialog" aria-modal="true">
-      <button className="detail__close" onClick={onClose} aria-label="Close">
-        ✕
-      </button>
-      <div className="detail__stage" onClick={onClose}>
-        <img
-          src={fullUrl}
-          alt={photo.caption ?? ""}
-          onClick={onImageClick}
-          draggable={false}
-          style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
-        />
-        {flash > 0 && (
-          <span key={flash} className="bigheart" aria-hidden="true">
-            ♥
-          </span>
-        )}
+      <div className="detail__topbar">
+        <span className="detail__counter">{index >= 0 ? `${index + 1} / ${photos.length}` : ""}</span>
+        <button className="detail__close" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div
+        className="detail__stage"
+        onClick={onClose}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div ref={slideRef} key={photo.id} className={"detail__slide" + (dir ? ` detail__slide--${dir}` : "")}>
+          <img
+            src={fullUrl}
+            alt={photo.caption ?? ""}
+            onClick={onImageClick}
+            draggable={false}
+            style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
+          />
+          {flash > 0 && (
+            <span key={flash} className="bigheart" aria-hidden="true">
+              ♥
+            </span>
+          )}
+        </div>
+        {prev && <span className="detail__edge detail__edge--l" aria-hidden="true" />}
+        {next && <span className="detail__edge detail__edge--r" aria-hidden="true" />}
       </div>
       <div className="detail__panel">
         <div className="detail__author">
@@ -117,11 +214,16 @@ export function PhotoDetail({ photo, api, onClose, onHeart, onDelete }: Props) {
           </div>
         )}
         <div className="detail__actions">
-          <a className="link" href={fullUrl} target="_blank" rel="noreferrer">
-            {t("openFull")} ↗
+          {canShare && (
+            <button className="pill" onClick={share}>
+              ↗ {t("share")}
+            </button>
+          )}
+          <a className="pill" href={fullUrl} target="_blank" rel="noreferrer">
+            ⤓ {t("openFull")}
           </a>
           {mine && (
-            <button className="link link--danger" onClick={remove} disabled={deleting}>
+            <button className="pill pill--danger" onClick={remove} disabled={deleting}>
               {t("delete")}
             </button>
           )}
