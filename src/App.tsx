@@ -3,6 +3,7 @@ import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Honeycomb } from "./components/Honeycomb";
 import { LangToggle } from "./components/LangToggle";
+import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
 import { PhotoDetail } from "./components/PhotoDetail";
 import { TopPhotos } from "./components/TopPhotos";
@@ -15,6 +16,16 @@ import type { Guest } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
+type View = "grid" | "bubbles";
+const VIEW_KEY = "wedding.view";
+
+function initialView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "bubbles" ? "bubbles" : "grid";
+  } catch {
+    return "grid";
+  }
+}
 
 export default function App() {
   const api = useMemo(createApi, []);
@@ -23,6 +34,7 @@ export default function App() {
   const [fatal, setFatal] = useState<string | null>(null);
   const [, setGuest] = useState<Guest | null>(null);
   const [tab, setTab] = useState<Tab>("wall");
+  const [view, setViewState] = useState<View>(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -41,6 +53,15 @@ export default function App() {
         setStage("error");
       });
   }, [api]);
+
+  const setView = useCallback((v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -74,6 +95,26 @@ export default function App() {
           <div className="header__sub muted">{t("photosCount", { n: photos.length })}</div>
         </div>
         <div className="header__right">
+          {tab === "wall" && (
+            <div className="viewtoggle" role="group">
+              <button
+                className={view === "grid" ? "on" : ""}
+                onClick={() => setView("grid")}
+                aria-label={t("viewGrid")}
+                aria-pressed={view === "grid"}
+              >
+                ▦
+              </button>
+              <button
+                className={view === "bubbles" ? "on" : ""}
+                onClick={() => setView("bubbles")}
+                aria-label={t("viewBubbles")}
+                aria-pressed={view === "bubbles"}
+              >
+                ⬡
+              </button>
+            </div>
+          )}
           <LangToggle />
           {api.guest && <Avatar guest={api.guest} urlFor={api.urlFor} size={32} />}
         </div>
@@ -83,7 +124,11 @@ export default function App() {
         {error && <div className="banner banner--error">{error}</div>}
         {tab === "wall" ? (
           <>
-            <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
+            {view === "grid" ? (
+              <Masonry photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
+            ) : (
+              <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
+            )}
             {!loading && photos.length === 0 && (
               <div className="empty">
                 <div className="empty__title">{t("emptyWall")}</div>

@@ -9,20 +9,31 @@ import type { Api, Guest, Photo, RealtimeHandlers } from "./types";
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
 const EMOJI = ["💍", "💐", "🥂", "💃", "🎂", "🕺", "✨", "🌹", "🎶", "📸", "🍽️", "🎉"];
 
-function makeImage(seed: number, size: number): string {
+const RATIOS = [
+  [3, 4],
+  [4, 3],
+  [1, 1],
+  [9, 16],
+  [3, 4],
+  [4, 5],
+];
+
+function makeImage(seed: number, w: number, h: number): string {
   const c = document.createElement("canvas");
-  c.width = c.height = size;
+  c.width = w;
+  c.height = h;
   const ctx = c.getContext("2d")!;
   const h1 = (seed * 47) % 360;
-  const g = ctx.createLinearGradient(0, 0, size, size);
+  const g = ctx.createLinearGradient(0, 0, w, h);
   g.addColorStop(0, `hsl(${h1} 45% 28%)`);
   g.addColorStop(1, `hsl(${(h1 + 60) % 360} 55% 55%)`);
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillRect(0, 0, w, h);
+  const size = Math.min(w, h);
   ctx.font = `${Math.round(size * 0.42)}px system-ui`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(EMOJI[seed % EMOJI.length], size / 2, size / 2 + size * 0.02);
+  ctx.fillText(EMOJI[seed % EMOJI.length], w / 2, h / 2 + size * 0.02);
   return c.toDataURL("image/jpeg", 0.8);
 }
 
@@ -36,8 +47,11 @@ export function createDemoApi(): Api {
   const count = 34;
   for (let i = 0; i < count; i++) {
     const id = `demo-${i}`;
-    urls.set(`${id}.jpg`, makeImage(i, 900));
-    urls.set(`${id}_t.jpg`, makeImage(i, 512));
+    const [rw, rh] = RATIOS[(i * 5) % RATIOS.length];
+    const width = Math.round((900 * rw) / Math.max(rw, rh));
+    const height = Math.round((900 * rh) / Math.max(rw, rh));
+    urls.set(`${id}.jpg`, makeImage(i, width, height));
+    urls.set(`${id}_t.jpg`, makeImage(i, Math.round(width * 0.6), Math.round(height * 0.6)));
     const g = guests[i % guests.length];
     const scored = i % 3 !== 0;
     photos.push({
@@ -45,8 +59,8 @@ export function createDemoApi(): Api {
       guest_id: g.id,
       path: `${id}.jpg`,
       thumb_path: `${id}_t.jpg`,
-      width: 900,
-      height: 900,
+      width,
+      height,
       caption: i % 5 === 0 ? "Quel moment ✨" : null,
       created_at: new Date(Date.now() - i * 4 * 60_000).toISOString(),
       guest: g,

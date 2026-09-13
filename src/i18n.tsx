@@ -41,6 +41,9 @@ const en = {
   demoBanner: "Demo mode — add your Supabase keys in .env to go live.",
   connecting: "Connecting…",
   hearts: "hearts",
+  newPhotos: "{n} new",
+  viewGrid: "Grid view",
+  viewBubbles: "Bubble view",
   theme: {
     couple: "Bride & Groom",
     ceremony: "Ceremony",
@@ -94,6 +97,9 @@ const fr: Dict = {
   demoBanner: "Mode démo — ajoutez vos clés Supabase dans .env pour passer en ligne.",
   connecting: "Connexion…",
   hearts: "cœurs",
+  newPhotos: "{n} nouvelles",
+  viewGrid: "Vue grille",
+  viewBubbles: "Vue bulles",
   theme: {
     couple: "Les mariés",
     ceremony: "Cérémonie",

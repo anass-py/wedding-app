@@ -2,7 +2,8 @@
 
 A web app (PWA) your guests open by scanning a QR code. They type their first name, optionally
 snap a selfie, and start posting photos — from the camera or their gallery. Everyone sees the
-photos appear live on an Apple-Watch-style honeycomb wall. Tapping a photo shows who took it.
+photos appear live on a Pinterest-style wall (with an Apple-Watch-style "bubbles" view one tap
+away). Tapping a photo shows who took it.
 A **Top 5** tab ranks the best photos overall and by theme (bride & groom, decoration, dance
 floor…) using Claude vision blended with guest ❤️.
 
@@ -98,7 +99,8 @@ src/
   App.tsx                 shell: header, wall/top tabs, upload FAB, detail overlay
   config.ts               names, themes, ranking weights          ← edit me
   i18n.tsx                EN/FR strings
-  components/Honeycomb    the watch-style wall (hex spiral, fisheye scale, drag + inertia)
+  components/Masonry      the default wall: Pinterest-style columns, "N new" pill when scrolled
+  components/Honeycomb    alternate wall: Apple-Watch-style bubbles (hex spiral, fisheye, inertia)
   components/TopPhotos    Top 5 overall / per theme
   components/PhotoDetail  full photo, author, hearts, delete own
   components/UploadSheet  camera / gallery picker, multi-upload
