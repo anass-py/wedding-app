@@ -11,6 +11,8 @@ interface Props {
   onSelect: (photo: Photo) => void;
 }
 
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+
 export function TopPhotos({ photos, api, onSelect }: Props) {
   const { t, themeName } = useI18n();
   const [theme, setTheme] = useState<Theme | "all">("all");
@@ -25,6 +27,15 @@ export function TopPhotos({ photos, api, onSelect }: Props) {
 
   return (
     <div className="top">
+      <header className="top__head">
+        <p className="eyebrow">{t("topEyebrow")}</p>
+        <h2 className="top__title">
+          {t("top")}
+          <span className="top__theme"> · {theme === "all" ? t("allThemes") : themeName(theme)}</span>
+        </h2>
+        <p className="top__sub">{t("topSub")}</p>
+      </header>
+
       <div className="chips chips--scroll">
         <button className={"chip chip--btn" + (theme === "all" ? " chip--active" : "")} onClick={() => setTheme("all")}>
           {t("allThemes")}
@@ -41,48 +52,62 @@ export function TopPhotos({ photos, api, onSelect }: Props) {
       </div>
 
       {ranked.length === 0 ? (
-        <p className="top__empty muted">{t("topEmpty")}</p>
+        <div className="top__empty">
+          <div className="ornament">
+            <span>✦</span>
+          </div>
+          <p className="muted">{t("topEmpty")}</p>
+        </div>
       ) : (
         <>
-          <TopCard photo={first} rank={1} api={api} onSelect={onSelect} big />
-          <div className="top__grid">
-            {rest.map((p, i) => (
-              <TopCard key={p.id} photo={p} rank={i + 2} api={api} onSelect={onSelect} />
-            ))}
-          </div>
+          <button className="hero" onClick={() => onSelect(first)}>
+            <span className="hero__frame">
+              <img src={api.urlFor(first.path)} alt="" draggable={false} />
+              <span className="hero__numeral">{ROMAN[0]}</span>
+            </span>
+            <span className="hero__meta">
+              <Avatar guest={first.guest} urlFor={api.urlFor} size={34} />
+              <span className="hero__name">{first.guest.name}</span>
+              <Stats photo={first} />
+            </span>
+            {first.score?.reason && <span className="hero__reason">{first.score.reason}</span>}
+          </button>
+
+          {rest.length > 0 && (
+            <>
+              <div className="ornament">
+                <span>✦</span>
+              </div>
+              <ol className="ranklist">
+                {rest.map((p, i) => (
+                  <li key={p.id}>
+                    <button className="rankrow" onClick={() => onSelect(p)}>
+                      <span className="rankrow__numeral">{ROMAN[i + 1]}</span>
+                      <span className="rankrow__thumb">
+                        <img src={api.urlFor(p.thumb_path)} alt="" loading="lazy" draggable={false} />
+                      </span>
+                      <span className="rankrow__body">
+                        <span className="rankrow__name">{p.guest.name}</span>
+                        <Stats photo={p} />
+                        {p.score?.reason && <span className="rankrow__reason">{p.score.reason}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
         </>
       )}
     </div>
   );
 }
 
-function TopCard({
-  photo,
-  rank,
-  api,
-  onSelect,
-  big,
-}: {
-  photo: Photo;
-  rank: number;
-  api: Api;
-  onSelect: (p: Photo) => void;
-  big?: boolean;
-}) {
-  const { t } = useI18n();
+function Stats({ photo }: { photo: Photo }) {
   return (
-    <button className={"topcard" + (big ? " topcard--big" : "")} onClick={() => onSelect(photo)}>
-      <img src={api.urlFor(big ? photo.path : photo.thumb_path)} alt="" loading="lazy" draggable={false} />
-      <span className="topcard__rank">{rank}</span>
-      <span className="topcard__foot">
-        <Avatar guest={photo.guest} urlFor={api.urlFor} size={big ? 30 : 24} />
-        <span className="topcard__name">{photo.guest.name}</span>
-        <span className="topcard__stats">
-          ♥ {photo.hearts}
-          {photo.score && <span title={t("aiPick")}> · ★ {finalScore(photo).toFixed(1)}</span>}
-        </span>
-      </span>
-      {big && photo.score?.reason && <span className="topcard__reason">{photo.score.reason}</span>}
-    </button>
+    <span className="stats">
+      <span>♥ {photo.hearts}</span>
+      {photo.score && <span>★ {finalScore(photo).toFixed(1)}</span>}
+    </span>
   );
 }
