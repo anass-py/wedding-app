@@ -57,6 +57,12 @@ Then make the QR code for the tables:
 npm run qr -- https://something.vercel.app     # writes qr.png + qr.svg
 ```
 
+## 3b. The live wall on the venue screen
+
+Plug a laptop into the TV/projector and open **`https://your-url/tv`** in full screen (F11).
+It cycles through the photos with the photographer's name, shows a live count and a QR code
+guests scan to join, and new photos jump the queue with a NEW tag. Click or press space to pause.
+
 ## 4. AI ranking (Top 5)
 
 [scripts/rank.ts](scripts/rank.ts) looks at every photo not yet scored, asks Claude to grade it
