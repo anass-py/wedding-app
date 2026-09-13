@@ -1,5 +1,6 @@
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
 import { processImage } from "./image";
+import { uid } from "./uid";
 import type { Api, Guest, Photo, RealtimeHandlers, Score } from "./types";
 
 const BUCKET = "photos";
@@ -174,7 +175,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async uploadPhoto(file, caption) {
       if (!guest || !authId) throw new Error("Not registered");
       const processed = await processImage(file);
-      const base = `${authId}/${crypto.randomUUID()}`;
+      const base = `${authId}/${uid()}`;
       const path = `${base}.jpg`;
       const thumb_path = `${base}_t.jpg`;
       await Promise.all([upload(path, processed.full), upload(thumb_path, processed.thumb)]);

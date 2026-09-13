@@ -377,6 +377,9 @@ img { display: block; }
 .profile__stats b { font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1; }
 .profile__stats span { font-size: 12px; color: var(--muted); }
 .install { background: var(--bg3); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; }
+.segmented button { padding: 9px; border-radius: 9px; font-size: 14px; color: var(--muted); transition: background 0.15s, color 0.15s; }
+.segmented button.on { background: var(--bg2); color: var(--text); box-shadow: 0 1px 4px var(--shadow); }
 .install__title { font-size: 14px; }
 
 /* ── Welcome ───────────────────────────────────────────────── */

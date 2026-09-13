@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
+import { ImageError } from "../lib/image";
 import { Icon } from "./Icon";
 import type { Api, Photo } from "../lib/types";
 
@@ -46,7 +47,8 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
         done.push(await api.uploadPhoto(picked[i].file, i === 0 ? caption : undefined));
       } catch (e) {
         console.error(e);
-        onError(t("uploadFailed"));
+        if (e instanceof ImageError) onError(t("unsupportedImage"));
+        else onError(`${t("uploadFailed")} (${e instanceof Error ? e.message : String(e)})`);
       }
     }
     setProgress(null);

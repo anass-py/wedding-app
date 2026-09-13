@@ -23,8 +23,9 @@ const CLOSE_PX = 110;
 export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete }: Props) {
   const { t, themeName } = useI18n();
   const [deleting, setDeleting] = useState(false);
-  const [burst, setBurst] = useState(0);
-  const [flash, setFlash] = useState(0);
+  const [burst, setBurst] = useState<{ photoId: string; n: number } | null>(null);
+  const [flash, setFlash] = useState<{ photoId: string; n: number } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [dir, setDir] = useState<"left" | "right" | null>(null);
   const lastTap = useRef(0);
   const slideRef = useRef<HTMLDivElement>(null);
@@ -63,7 +64,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
 
   const heart = () => {
     if (!photo.hearted) {
-      setBurst((b) => b + 1);
+      setBurst((b) => ({ photoId: photo.id, n: (b?.n ?? 0) + 1 }));
       buzz();
     }
     onHeart(photo);
@@ -76,7 +77,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     const now = performance.now();
     if (now - lastTap.current < 320) {
       lastTap.current = 0;
-      setFlash((f) => f + 1);
+      setFlash((f) => ({ photoId: photo.id, n: (f?.n ?? 0) + 1 }));
       if (!photo.hearted) heart();
     } else {
       lastTap.current = now;
@@ -125,6 +126,32 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     el.style.opacity = "";
   };
 
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const blob = await (await fetch(fullUrl)).blob();
+      const name = `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.jpg`;
+      const file = new File([blob], name, { type: blob.type || "image/jpeg" });
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: WEDDING.couple });
+      } else {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      }
+    } catch {
+      /* cancelled or blocked */
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const share = async () => {
     try {
       await navigator.share({ title: WEDDING.couple, text: `${photo.guest.name} · ${WEDDING.couple}`, url: fullUrl });
@@ -168,8 +195,8 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
             draggable={false}
             style={photo.width && photo.height ? { aspectRatio: `${photo.width} / ${photo.height}` } : undefined}
           />
-          {flash > 0 && (
-            <span key={flash} className="bigheart" aria-hidden="true">
+          {flash?.photoId === photo.id && (
+            <span key={flash.n} className="bigheart" aria-hidden="true">
               ♥
             </span>
           )}
@@ -192,8 +219,8 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
               <Icon name="heart" size={22} fill={photo.hearted} strokeWidth={1.8} />
             </span>
             <span className="heart__count">{photo.hearts}</span>
-            {burst > 0 && (
-              <span key={burst} className="heart__burst" aria-hidden="true">
+            {burst?.photoId === photo.id && (
+              <span key={burst.n} className="heart__burst" aria-hidden="true">
                 {Array.from({ length: 7 }, (_, i) => (
                   <i key={i} style={{ ["--a" as string]: `${-100 + i * 33}deg` }}>
                     ♥
@@ -222,9 +249,9 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
               <Icon name="share" size={16} /> {t("share")}
             </button>
           )}
-          <a className="pill" href={fullUrl} target="_blank" rel="noreferrer">
+          <button className="pill" onClick={save} disabled={saving}>
             <Icon name="download" size={16} /> {t("openFull")}
-          </a>
+          </button>
           {mine && (
             <button className="pill pill--danger" onClick={remove} disabled={deleting}>
               <Icon name="trash" size={16} /> {t("delete")}

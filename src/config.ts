@@ -10,7 +10,7 @@ export const WEDDING = {
   /**
    * "midnight" — dark, photos glow, best for an evening party.
    * "ivory"    — cream paper & ink, invitation-card feel, best for daytime.
-   * Guests can't switch; pick one.
+   * This is the default; guests can switch in their profile sheet.
    */
   theme: "midnight" as "midnight" | "ivory",
 };

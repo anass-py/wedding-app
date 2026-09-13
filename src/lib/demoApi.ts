@@ -4,6 +4,7 @@
  */
 import { THEMES } from "../config";
 import { processImage } from "./image";
+import { uid } from "./uid";
 import type { Api, Guest, Photo, RealtimeHandlers } from "./types";
 
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
@@ -140,7 +141,7 @@ export function createDemoApi(): Api {
     async uploadPhoto(file, caption) {
       if (!me) throw new Error("Not registered");
       const processed = await processImage(file);
-      const id = crypto.randomUUID();
+      const id = uid();
       urls.set(`${id}.jpg`, URL.createObjectURL(processed.full));
       urls.set(`${id}_t.jpg`, URL.createObjectURL(processed.thumb));
       const photo: Photo = {

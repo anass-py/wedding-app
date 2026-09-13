@@ -3,6 +3,9 @@
  * upload so a 12 MP phone photo becomes ~300 KB, uploads fast on venue WiFi,
  * and storage stays within the free tier.
  */
+/** Thrown when the browser cannot decode the picked file (e.g. HEIC on Android). */
+export class ImageError extends Error {}
+
 export interface Processed {
   full: Blob;
   thumb: Blob;
@@ -19,7 +22,7 @@ export async function processImage(file: File): Promise<Processed> {
   try {
     const w = img.naturalWidth;
     const h = img.naturalHeight;
-    if (!w || !h) throw new Error("Could not decode image");
+    if (!w || !h) throw new ImageError("Could not decode image");
 
     const scale = Math.min(1, FULL_MAX_SIDE / Math.max(w, h));
     const fw = Math.round(w * scale);
@@ -58,7 +61,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     img.onload = () => resolve(img);
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Unsupported image format"));
+      reject(new ImageError("Unsupported image format"));
     };
     img.src = url;
   });

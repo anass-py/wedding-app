@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
 import { processAvatar } from "../lib/image";
 import type { Api, Guest, Photo } from "../lib/types";
@@ -24,7 +25,12 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
   const [name, setName] = useState(guest.name);
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [theme, setThemeState] = useState<ThemeName>(getTheme);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pickTheme = (th: ThemeName) => {
+    setTheme(th);
+    setThemeState(th);
+  };
 
   const stats = useMemo(() => {
     const mine = photos.filter((p) => p.guest_id === guest.id);
@@ -93,6 +99,17 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
           <span>{t("yourName")}</span>
           <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
         </label>
+        <div className="field">
+          <span>{t("look")}</span>
+          <div className="segmented">
+            <button className={theme === "midnight" ? "on" : ""} onClick={() => pickTheme("midnight")}>
+              ● {t("midnight")}
+            </button>
+            <button className={theme === "ivory" ? "on" : ""} onClick={() => pickTheme("ivory")}>
+              ○ {t("ivory")}
+            </button>
+          </div>
+        </div>
         {showInstall && (
           <div className="install">
             <div className="install__title">
