@@ -125,8 +125,16 @@ export function createDemoApi(): Api {
     },
     subscribe(h) {
       handlers = h;
+      // Pretend other guests are reacting so the live effects can be seen in demo mode.
+      const timer = window.setInterval(() => {
+        const p = photos[Math.floor(Math.random() * Math.min(photos.length, 8))];
+        if (!p) return;
+        p.hearts += 1;
+        handlers?.onHeart(p.id, guests[Math.floor(Math.random() * guests.length)].id, 1);
+      }, 3500);
       return () => {
         handlers = null;
+        window.clearInterval(timer);
       };
     },
     async uploadPhoto(file, caption) {

@@ -47,7 +47,9 @@ export default function App() {
   const [celebrating, setCelebrating] = useState<Photo[] | null>(null);
   const [wallReset, setWallReset] = useState(0);
 
-  const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready");
+  const [pulse, setPulse] = useState<{ key: number; photoId: string } | null>(null);
+  const onRemoteHeart = useCallback((photoId: string) => setPulse({ key: Date.now() + Math.random(), photoId }), []);
+  const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
 
   useEffect(() => {
     api
@@ -163,6 +165,7 @@ export default function App() {
                 onSelect={(p) => setSelectedId(p.id)}
                 highlight={topIds}
                 resetKey={wallReset}
+                pulse={pulse}
               />
             ) : (
               <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />

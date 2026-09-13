@@ -1,28 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Api, Photo } from "../lib/types";
 
-export function usePhotos(api: Api, ready: boolean) {
+export function usePhotos(api: Api, ready: boolean, onRemoteHeart?: (photoId: string) => void) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const myId = useRef<string | null>(null);
+  const remoteHeart = useRef(onRemoteHeart);
+  remoteHeart.current = onRemoteHeart;
 
   useEffect(() => {
     if (!ready) return;
     myId.current = api.guest?.id ?? null;
     let cancelled = false;
 
-    api
-      .listPhotos()
-      .then((list) => {
-        if (!cancelled) setPhotos(list);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const load = () =>
+      api
+        .listPhotos()
+        .then((list) => {
+          if (!cancelled) {
+            setPhotos(list);
+            setError(null);
+          }
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    void load();
+
+    // Phones drop the websocket in the background; catch up when we come back.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     const unsubscribe = api.subscribe({
       onPhotoInsert: (photo) => {
@@ -34,6 +47,7 @@ export function usePhotos(api: Api, ready: boolean) {
       onHeart: (photoId, guestId, delta) => {
         // Our own hearts were already applied optimistically.
         if (guestId === myId.current) return;
+        if (delta > 0) remoteHeart.current?.(photoId);
         setPhotos((prev) =>
           prev.map((p) => (p.id === photoId ? { ...p, hearts: Math.max(0, p.hearts + delta) } : p)),
         );
@@ -44,6 +58,7 @@ export function usePhotos(api: Api, ready: boolean) {
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
       unsubscribe();
     };
   }, [api, ready]);

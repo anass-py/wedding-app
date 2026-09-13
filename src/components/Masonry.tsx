@@ -11,7 +11,11 @@ interface Props {
   highlight?: Set<string>;
   /** Change this value to reveal held-back photos and scroll to the top. */
   resetKey?: number;
+  /** A heart that just arrived from another guest; a ♥ floats up on that card. */
+  pulse?: { key: number; photoId: string } | null;
 }
+
+const BATCH = 60;
 
 const MIN_COLUMN_WIDTH = 180;
 const MIN_RATIO = 0.65; // clamp very wide…
@@ -35,7 +39,7 @@ function distribute(photos: Photo[], cols: number): Photo[][] {
   return columns;
 }
 
-export function Masonry({ photos, urlFor, onSelect, highlight, resetKey }: Props) {
+export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }: Props) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(2);
@@ -84,7 +88,32 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey }: Props
     known.current = new Set(shown.map((p) => p.id));
   });
 
-  const columns = useMemo(() => distribute(shown, cols), [shown, cols]);
+  // Render in batches: a sentinel at the bottom asks for more as you scroll.
+  const [limit, setLimit] = useState(BATCH);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!el || !root) return;
+    const io = new IntersectionObserver(
+      (entries) => entries[0].isIntersecting && setLimit((l) => l + BATCH),
+      { root, rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const visible = useMemo(() => shown.slice(0, limit), [shown, limit]);
+
+  // Floating hearts from other guests' reactions.
+  const [floats, setFloats] = useState<{ key: number; photoId: string }[]>([]);
+  useEffect(() => {
+    if (!pulse) return;
+    setFloats((f) => [...f, pulse]);
+    const id = window.setTimeout(() => setFloats((f) => f.filter((x) => x.key !== pulse.key)), 1400);
+    return () => window.clearTimeout(id);
+  }, [pulse]);
+
+  const columns = useMemo(() => distribute(visible, cols), [visible, cols]);
 
   return (
     <div className="masonry-wrap">
@@ -104,8 +133,15 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey }: Props
                 onClick={() => onSelect(p)}
               >
                 <span className="card__img" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
-                  <img src={urlFor(p.thumb_path)} alt={p.caption ?? ""} loading="lazy" decoding="async" draggable={false} />
+                  <FadeImg src={urlFor(p.thumb_path)} alt={p.caption ?? ""} />
                   {highlight?.has(p.id) && <span className="card__star">★</span>}
+                  {floats
+                    .filter((f) => f.photoId === p.id)
+                    .map((f) => (
+                      <span key={f.key} className="floatheart" aria-hidden="true">
+                        ♥
+                      </span>
+                    ))}
                 </span>
                 {p.caption && <span className="card__caption">{p.caption}</span>}
                 <span className="card__foot">
@@ -119,7 +155,27 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey }: Props
             ))}
           </div>
         ))}
+        <div ref={sentinelRef} className="masonry__sentinel" />
       </div>
     </div>
+  );
+}
+
+/** Image that fades in once decoded (also when it comes straight from cache). */
+export function FadeImg({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      className={loaded ? "loaded" : undefined}
+      onLoad={() => setLoaded(true)}
+      ref={(el) => {
+        if (el?.complete && el.naturalWidth > 0) setLoaded(true);
+      }}
+    />
   );
 }
