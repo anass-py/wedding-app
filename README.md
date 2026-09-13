@@ -115,6 +115,20 @@ three secrets in the repo settings (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 To tweak what "best" means, edit the `SYSTEM` prompt in `scripts/rank.ts` and run `--all`.
 Themes live in both `src/config.ts` and `scripts/rank.ts` — keep them in sync.
 
+## 5. The memories film (after the wedding — or during)
+
+```bash
+npm run memories -- --music path/to/song.mp3          # → memories.mp4, 1080×1920 for phones/WhatsApp
+npm run memories -- --landscape --music song.mp3      # 1920×1080 for the TV
+npm run memories -- --lang fr --count 32              # French chapter titles, 32 moments
+```
+
+Claude reads every photo's score, theme, tags and time and sequences ~28 moments into a story
+with chapter titles (getting ready → ceremony → couple → guests → party); ffmpeg renders them
+with slow Ken-Burns motion, 3-second video clips, crossfades, title cards and your music.
+Without `ANTHROPIC_API_KEY` (or with `--no-ai`) it orders by hearts and time instead.
+`--from ./folder` renders from local files, e.g. the photographer's selection.
+
 ## Wedding-day checklist
 
 - [ ] `src/config.ts` has your names; deployed; QR printed on cards for the tables.

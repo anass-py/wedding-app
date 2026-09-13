@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const run = promisify(execFile);
 const BUCKET = "photos";
@@ -41,9 +41,14 @@ export async function ffmpegPath(): Promise<string> {
   return "ffmpeg";
 }
 
-const supabase = createClient(env("SUPABASE_URL", process.env.VITE_SUPABASE_URL), env("SUPABASE_SERVICE_ROLE_KEY"), {
-  auth: { persistSession: false },
-});
+// Created lazily so importing ffmpegPath() from another script doesn't require Supabase env.
+let client: SupabaseClient | null = null;
+function supabase(): SupabaseClient {
+  client ??= createClient(env("SUPABASE_URL", process.env.VITE_SUPABASE_URL), env("SUPABASE_SERVICE_ROLE_KEY"), {
+    auth: { persistSession: false },
+  });
+  return client;
+}
 
 interface VideoRow {
   id: string;
@@ -51,20 +56,20 @@ interface VideoRow {
 }
 
 async function pendingVideos(): Promise<VideoRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabase()
     .from("photos")
     .select("id, path")
     .eq("kind", "video")
     .not("path", "like", `%${WEB_SUFFIX}`)
     .order("created_at");
   if (error) throw error;
-  return data;
+  return data as VideoRow[];
 }
 
 async function transcodeOne(row: VideoRow, ffmpeg: string): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), "wedding-"));
   try {
-    const { data: blob, error } = await supabase.storage.from(BUCKET).download(row.path);
+    const { data: blob, error } = await supabase().storage.from(BUCKET).download(row.path);
     if (error) throw error;
     const input = join(dir, "in" + (row.path.match(/\.\w+$/)?.[0] ?? ".bin"));
     const output = join(dir, "out.mp4");
@@ -79,13 +84,13 @@ async function transcodeOne(row: VideoRow, ffmpeg: string): Promise<void> {
       output,
     ], { maxBuffer: 1 << 26 });
     const webPath = row.path.replace(/\.\w+$/, "") + WEB_SUFFIX;
-    const { error: upErr } = await supabase.storage
-      .from(BUCKET)
+    const { error: upErr } = await supabase()
+      .storage.from(BUCKET)
       .upload(webPath, await readFile(output), { contentType: "video/mp4", cacheControl: "31536000", upsert: true });
     if (upErr) throw upErr;
-    const { error: dbErr } = await supabase.from("photos").update({ path: webPath }).eq("id", row.id);
+    const { error: dbErr } = await supabase().from("photos").update({ path: webPath }).eq("id", row.id);
     if (dbErr) throw dbErr;
-    if (!process.env.KEEP_ORIGINALS) await supabase.storage.from(BUCKET).remove([row.path]);
+    if (!process.env.KEEP_ORIGINALS) await supabase().storage.from(BUCKET).remove([row.path]);
     console.log(`  ${row.id.slice(0, 8)}  ${row.path} → ${webPath}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
