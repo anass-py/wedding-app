@@ -10,7 +10,8 @@
     "rank": "node --env-file-if-exists=.env --import tsx scripts/rank.ts",
     "rank:watch": "node --env-file-if-exists=.env --import tsx scripts/rank.ts --watch",
     "qr": "node --import tsx scripts/qr.ts",
-    "icons": "python3 scripts/make_icons.py"
+    "icons": "python3 scripts/make_icons.py",
+    "compare": "node scripts/compare.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

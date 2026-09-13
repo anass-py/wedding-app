@@ -1,8 +1,16 @@
 # Versions
 
-Each version is a git tag. To look at one: `git checkout v0.3 && npm run dev`
-(then `git checkout main` to come back). Later versions include everything before them
-unless noted.
+Each version is a git tag. Later versions include everything before them unless noted.
+
+**To open all of them at once:**
+
+```bash
+npm run compare
+```
+
+It builds every version into its own folder and serves one page — `http://localhost:5555/`
+(it also prints an address for your phone on the same WiFi) — where you tap a version to open
+it. Your name and language carry over between versions.
 
 | Tag | What changed |
 |-----|--------------|
@@ -17,12 +25,10 @@ unless noted.
 | v0.9 | Premium finish: all glyph/emoji icons replaced with one hand-drawn SVG icon set (identical on iPhone and Android), gold icon discs on the upload choices, tighter nav typography, `prefers-reduced-motion` respected. |
 | v1.0 | Two looks, one switch: `theme: "midnight"` (dark, photos glow — evening) or `theme: "ivory"` (cream paper, ink, deeper gold — invitation feel, daytime) in `src/config.ts`. Everything above included. |
 
-## How to compare on your phone
+## Looking at one version's code
 
-```bash
-git checkout v0.3 && npm run dev      # any tag from the table
-git checkout main                     # back to the latest
-```
+`git checkout v0.3` switches the whole folder to that version (you'll see "detached HEAD");
+`git checkout main` brings you back to the latest. Prefer `npm run compare` for just *looking*.
 
 To try Ivory: open `src/config.ts`, change `theme: "midnight"` to `theme: "ivory"`, and the dev
 server reloads.
