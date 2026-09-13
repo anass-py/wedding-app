@@ -15,3 +15,14 @@ unless noted.
 | v0.7 | First impressions: animated onboarding with ornament, a "Welcome, Nadia" spark moment after joining, splash screen with the couple's names instead of "Connecting…", shimmer skeleton grid while photos load. Tap your avatar → profile sheet: change name/selfie, see your photos & hearts received, "Add to Home Screen" hint. |
 | v0.8 | Live & smooth: when another guest hearts a photo, a ♥ floats up on that card in everyone's grid; images fade in as they load; the grid renders in batches of 60 so 500+ photos stay fast; the list refreshes when the app comes back to the foreground; Top 5 hero and rows animate in. |
 | v0.9 | Premium finish: all glyph/emoji icons replaced with one hand-drawn SVG icon set (identical on iPhone and Android), gold icon discs on the upload choices, tighter nav typography, `prefers-reduced-motion` respected. |
+| v1.0 | Two looks, one switch: `theme: "midnight"` (dark, photos glow — evening) or `theme: "ivory"` (cream paper, ink, deeper gold — invitation feel, daytime) in `src/config.ts`. Everything above included. |
+
+## How to compare on your phone
+
+```bash
+git checkout v0.3 && npm run dev      # any tag from the table
+git checkout main                     # back to the latest
+```
+
+To try Ivory: open `src/config.ts`, change `theme: "midnight"` to `theme: "ivory"`, and the dev
+server reloads.

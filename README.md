@@ -8,6 +8,9 @@ A **Top 5** tab ranks the best photos overall and by theme (bride & groom, decor
 floor…) using Claude vision blended with guest ❤️.
 
 - No app store, no install, no passwords. Works on iPhone and Android in the browser.
+- Posting is a moment: the photo springs in with a burst of sparks, then lands on the wall.
+- Swipeable viewer with share, live floating hearts, a Top 5 that reads like a magazine spread.
+- `/tv` — a live slideshow with a QR code for the venue screen.
 - English / French toggle.
 - Photos are resized in the browser before upload (fast on venue WiFi, tiny storage bill).
 
@@ -22,7 +25,9 @@ Open the printed URL. Without Supabase keys the app runs in **demo mode** with p
 photos so you can feel the wall, the Top tab and the upload flow. Open it on your phone via the
 `Network:` URL Vite prints (same WiFi) to try the real camera.
 
-Edit [src/config.ts](src/config.ts) for your names, date and hashtag.
+Edit [src/config.ts](src/config.ts) for your names, date, hashtag and the look: `theme: "midnight"`
+(dark, evening) or `theme: "ivory"` (cream invitation-card look, daytime).
+See [VERSIONS.md](VERSIONS.md) for the history of every version and how to compare them.
 
 ## 2. Create the backend (Supabase, ~10 minutes, free)
 

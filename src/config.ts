@@ -7,6 +7,12 @@ export const WEDDING = {
   date: "2026-10-17",
   /** Optional hashtag shown under the title (leave "" to hide). */
   hashtag: "#SaraEtYassine",
+  /**
+   * "midnight" — dark, photos glow, best for an evening party.
+   * "ivory"    — cream paper & ink, invitation-card feel, best for daytime.
+   * Guests can't switch; pick one.
+   */
+  theme: "midnight" as "midnight" | "ivory",
 };
 
 /** Themes used by the AI ranking. Keep in sync with scripts/rank.ts THEMES. */
