@@ -4,6 +4,7 @@ import { useI18n } from "../i18n";
 import { finalScore, topPhotos } from "../lib/ranking";
 import type { Api, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 
 interface Props {
   photos: Photo[];
@@ -106,8 +107,14 @@ export function TopPhotos({ photos, api, onSelect }: Props) {
 function Stats({ photo }: { photo: Photo }) {
   return (
     <span className="stats">
-      <span>♥ {photo.hearts}</span>
-      {photo.score && <span>★ {finalScore(photo).toFixed(1)}</span>}
+      <span>
+        <Icon name="heart" size={13} fill /> {photo.hearts}
+      </span>
+      {photo.score && (
+        <span>
+          <Icon name="star" size={13} fill strokeWidth={0} /> {finalScore(photo).toFixed(1)}
+        </span>
+      )}
     </span>
   );
 }

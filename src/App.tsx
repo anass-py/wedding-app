@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
+import { Icon } from "./components/Icon";
 import { Honeycomb } from "./components/Honeycomb";
 import { LangToggle } from "./components/LangToggle";
 import { Masonry } from "./components/Masonry";
@@ -131,7 +132,7 @@ export default function App() {
                 aria-label={t("viewGrid")}
                 aria-pressed={view === "grid"}
               >
-                ▦
+                <Icon name="grid" size={16} />
               </button>
               <button
                 className={view === "bubbles" ? "on" : ""}
@@ -139,7 +140,7 @@ export default function App() {
                 aria-label={t("viewBubbles")}
                 aria-pressed={view === "bubbles"}
               >
-                ⬡
+                <Icon name="bubbles" size={16} />
               </button>
             </div>
           )}
@@ -187,14 +188,14 @@ export default function App() {
 
       <nav className="nav">
         <button className={"nav__btn" + (tab === "wall" ? " nav__btn--on" : "")} onClick={() => setTab("wall")}>
-          <span className="nav__icon">▦</span>
+          <Icon name="grid" size={24} strokeWidth={tab === "wall" ? 2 : 1.6} />
           {t("wall")}
         </button>
         <button className="fab" onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
-          +
+          <Icon name="plus" size={30} strokeWidth={2.4} />
         </button>
         <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")}>
-          <span className="nav__icon">★</span>
+          <Icon name="star" size={24} fill={tab === "top"} strokeWidth={1.6} />
           {t("top")}
         </button>
       </nav>

@@ -4,6 +4,7 @@ import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 
 interface Props {
   photo: Photo;
@@ -148,7 +149,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
       <div className="detail__topbar">
         <span className="detail__counter">{index >= 0 ? `${index + 1} / ${photos.length}` : ""}</span>
         <button className="detail__close" onClick={onClose} aria-label="Close">
-          ✕
+          <Icon name="close" size={20} />
         </button>
       </div>
       <div
@@ -187,7 +188,9 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
             <div className="muted small">{relativeTime(photo.created_at, t)}</div>
           </div>
           <button className={"heart" + (photo.hearted ? " heart--on" : "")} onClick={heart} aria-pressed={photo.hearted}>
-            <span className="heart__icon">{photo.hearted ? "♥" : "♡"}</span>
+            <span className="heart__icon">
+              <Icon name="heart" size={22} fill={photo.hearted} strokeWidth={1.8} />
+            </span>
             <span className="heart__count">{photo.hearts}</span>
             {burst > 0 && (
               <span key={burst} className="heart__burst" aria-hidden="true">
@@ -216,15 +219,15 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
         <div className="detail__actions">
           {canShare && (
             <button className="pill" onClick={share}>
-              ↗ {t("share")}
+              <Icon name="share" size={16} /> {t("share")}
             </button>
           )}
           <a className="pill" href={fullUrl} target="_blank" rel="noreferrer">
-            ⤓ {t("openFull")}
+            <Icon name="download" size={16} /> {t("openFull")}
           </a>
           {mine && (
             <button className="pill pill--danger" onClick={remove} disabled={deleting}>
-              {t("delete")}
+              <Icon name="trash" size={16} /> {t("delete")}
             </button>
           )}
         </div>

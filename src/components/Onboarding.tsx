@@ -3,6 +3,7 @@ import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import { processAvatar } from "../lib/image";
 import type { Api, Guest } from "../lib/types";
+import { Icon } from "./Icon";
 import { LangToggle } from "./LangToggle";
 
 interface Props {
@@ -67,7 +68,13 @@ export function Onboarding({ api, onJoined }: Props) {
           }}
         />
         <button className="selfie" onClick={() => fileRef.current?.click()} type="button">
-          {selfie ? <img src={selfie.url} alt="" /> : <span className="selfie__icon">🤳</span>}
+          {selfie ? (
+            <img src={selfie.url} alt="" />
+          ) : (
+            <span className="selfie__icon">
+              <Icon name="camera" size={34} strokeWidth={1.4} />
+            </span>
+          )}
           <span className="selfie__label">
             {t("addSelfie")} <span className="muted">({t("optional")})</span>
           </span>

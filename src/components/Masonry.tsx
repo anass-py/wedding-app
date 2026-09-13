@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 
 interface Props {
   photos: Photo[];
@@ -134,7 +135,11 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
               >
                 <span className="card__img" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
                   <FadeImg src={urlFor(p.thumb_path)} alt={p.caption ?? ""} />
-                  {highlight?.has(p.id) && <span className="card__star">★</span>}
+                  {highlight?.has(p.id) && (
+                    <span className="card__star">
+                      <Icon name="star" size={13} fill strokeWidth={0} />
+                    </span>
+                  )}
                   {floats
                     .filter((f) => f.photoId === p.id)
                     .map((f) => (
@@ -148,7 +153,9 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
                   <Avatar guest={p.guest} urlFor={urlFor} size={20} />
                   <span className="card__name">{p.guest.name}</span>
                   {p.hearts > 0 && (
-                    <span className={"card__hearts" + (p.hearted ? " card__hearts--on" : "")}>♥ {p.hearts}</span>
+                    <span className={"card__hearts" + (p.hearted ? " card__hearts--on" : "")}>
+                      <Icon name="heart" size={12} fill={p.hearted} /> {p.hearts}
+                    </span>
                   )}
                 </span>
               </button>

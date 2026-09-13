@@ -3,6 +3,7 @@ import { useI18n } from "../i18n";
 import { processAvatar } from "../lib/image";
 import type { Api, Guest, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 import { LangToggle } from "./LangToggle";
 
 interface Props {
@@ -94,7 +95,9 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         </label>
         {showInstall && (
           <div className="install">
-            <div className="install__title">📲 {t("installTitle")}</div>
+            <div className="install__title">
+              <Icon name="phone" size={16} /> {t("installTitle")}
+            </div>
             <div className="muted small">{ios ? t("installIos") : t("installAndroid")}</div>
           </div>
         )}

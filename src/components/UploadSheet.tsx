@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
+import { Icon } from "./Icon";
 import type { Api, Photo } from "../lib/types";
 
 interface Props {
@@ -88,11 +89,15 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
         {picked.length === 0 ? (
           <div className="sheet__choices">
             <button className="bigbtn" onClick={() => cameraRef.current?.click()}>
-              <span className="bigbtn__icon">📷</span>
+              <span className="bigbtn__icon">
+                <Icon name="camera" size={24} />
+              </span>
               {t("takePhoto")}
             </button>
             <button className="bigbtn" onClick={() => galleryRef.current?.click()}>
-              <span className="bigbtn__icon">🖼️</span>
+              <span className="bigbtn__icon">
+                <Icon name="image" size={24} />
+              </span>
               {t("fromGallery")}
             </button>
           </div>
@@ -104,7 +109,7 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
                   <img src={p.url} alt="" />
                   {!progress && (
                     <button className="picked__remove" onClick={() => removeAt(i)} aria-label="Remove">
-                      ✕
+                      <Icon name="close" size={12} strokeWidth={2.2} />
                     </button>
                   )}
                 </div>
