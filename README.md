@@ -108,9 +108,12 @@ Cost: roughly **1 cent per photo** with the default `claude-opus-5` (a 500-photo
 Set `RANK_MODEL=claude-sonnet-5` in `.env` for about a third of that.
 
 **Wedding day without a laptop:** the GitHub Actions workflow in
-[.github/workflows/rank.yml](.github/workflows/rank.yml) runs the ranker every 10 minutes. Add the
-three secrets in the repo settings (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`ANTHROPIC_API_KEY`), and disable the workflow again after the wedding.
+[.github/workflows/rank.yml](.github/workflows/rank.yml) converts videos and scores photos every
+~10 minutes. It is off by default. To switch it on, in the GitHub repo go to *Settings → Secrets
+and variables → Actions*: add the three **secrets** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`ANTHROPIC_API_KEY`, then under **Variables** add `RANK_ENABLED` = `true`. Set it back to `false`
+after the wedding. (Without the secrets the run fails with a clear "Missing repository secrets"
+message — that is what the failed runs after the first push were.)
 
 To tweak what "best" means, edit the `SYSTEM` prompt in `scripts/rank.ts` and run `--all`.
 Themes live in both `src/config.ts` and `scripts/rank.ts` — keep them in sync.

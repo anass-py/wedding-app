@@ -1,8 +1,11 @@
-# Runs the video transcoder and the AI ranker every 10 minutes so you don't need a laptop running on the
-# wedding day. Enable by pushing the repo to GitHub and adding the three secrets
-# (Settings → Secrets and variables → Actions):
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
-# Disable afterwards (Actions → this workflow → "…" → Disable) to stop the cron.
+# Wedding-day worker in the cloud: converts new videos and scores new photos every
+# ~10 minutes so nobody needs a laptop running.
+#
+# It stays OFF until you switch it on:
+#   1. Settings → Secrets and variables → Actions → Secrets: add
+#        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
+#   2. Same page → Variables: add RANK_ENABLED = true   (set to false after the wedding)
+# "Run workflow" (Actions tab) always runs once, regardless of RANK_ENABLED.
 name: Rank photos
 on:
   schedule:
@@ -10,9 +13,24 @@ on:
   workflow_dispatch:
 jobs:
   rank:
+    if: github.event_name == 'workflow_dispatch' || vars.RANK_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
+      - name: Check secrets
+        run: |
+          missing=""
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY ANTHROPIC_API_KEY; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing — add them under Settings → Secrets and variables → Actions, then re-run."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -21,7 +39,3 @@ jobs:
       - run: npm ci
       - run: npm run transcode
       - run: npm run rank
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
