@@ -42,6 +42,7 @@ See [VERSIONS.md](VERSIONS.md) for the history of every version and how to compa
 
 ```bash
 cp .env.example .env     # then paste the URL and anon key into .env
+npm run doctor           # checks auth, tables, bucket, upload rights, realtime — fix anything it flags
 npm run dev              # demo banner disappears → you're live
 ```
 

@@ -14,7 +14,8 @@
     "compare": "node scripts/compare.mjs",
     "transcode": "node --env-file-if-exists=.env --import tsx scripts/transcode.ts",
     "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts",
-    "memories": "node --env-file-if-exists=.env --import tsx scripts/memories.ts"
+    "memories": "node --env-file-if-exists=.env --import tsx scripts/memories.ts",
+    "doctor": "node --env-file-if-exists=.env --import tsx scripts/doctor.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
