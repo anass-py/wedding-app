@@ -8,7 +8,8 @@ const BUCKET = "photos";
 
 const PHOTO_SELECT =
   "id, guest_id, kind, duration, path, thumb_path, width, height, caption, created_at, " +
-  "guest:guests(id, name, avatar_path), hearts(guest_id), photo_scores(score, theme, tags, reason)";
+  // guests!photos_guest_id_fkey: hearts also links photos↔guests, so the embed must name the FK.
+  "guest:guests!photos_guest_id_fkey(id, name, avatar_path), hearts(guest_id), photo_scores(score, theme, tags, reason)";
 
 interface PhotoRow {
   id: string;

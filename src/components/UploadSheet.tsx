@@ -21,6 +21,13 @@ interface Picked {
   video: boolean;
 }
 
+/** Supabase throws plain objects ({ message, statusCode… }), not Error instances. */
+function describe(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
+  return String(e);
+}
+
 export function UploadSheet({ api, onClose, onError, onDone }: Props) {
   const { t } = useI18n();
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -49,7 +56,7 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
       if (e.code === "too-long") return t("videoTooLong", { s: MEDIA.MAX_VIDEO_SECONDS });
       return t("unsupportedVideo");
     }
-    return `${t("uploadFailed")} (${e instanceof Error ? e.message : String(e)})`;
+    return `${t("uploadFailed")} (${describe(e)})`;
   };
 
   const post = async () => {

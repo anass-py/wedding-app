@@ -89,7 +89,7 @@ async function fromSupabase(dir: string): Promise<Moment[]> {
   const sb = createClient(url, key, { auth: { persistSession: false } });
   const { data, error } = await sb
     .from("photos")
-    .select("id, kind, path, created_at, caption, duration, guest:guests(name), hearts(guest_id), photo_scores(score, theme, tags, reason)")
+    .select("id, kind, path, created_at, caption, duration, guest:guests!photos_guest_id_fkey(name), hearts(guest_id), photo_scores(score, theme, tags, reason)")
     .order("created_at");
   if (error) throw error;
   const rows = data as unknown as {

@@ -47,6 +47,12 @@ async function main() {
   const { error: photosErr } = await sb.from("photos").select("id, kind, duration").limit(1);
   if (photosErr) bad(`table photos: ${photosErr.message}`, "re-run supabase/schema.sql (it adds the v1.2 video columns safely)");
   else ok("table photos (with video columns)");
+  const { error: feedErr } = await sb
+    .from("photos")
+    .select("id, guest:guests!photos_guest_id_fkey(id, name, avatar_path), hearts(guest_id), photo_scores(score, theme, tags, reason)")
+    .limit(1);
+  if (feedErr) bad(`feed query (embeds): ${feedErr.message}`, "re-run supabase/schema.sql");
+  else ok("feed query with guest/hearts/score embeds");
   const { error: scoresErr } = await sb.from("photo_scores").select("photo_id").limit(1);
   if (scoresErr) bad(`table photo_scores: ${scoresErr.message}`, "re-run supabase/schema.sql");
   else ok("table photo_scores");
@@ -98,7 +104,7 @@ async function main() {
     console.log("  · SUPABASE_SERVICE_ROLE_KEY not set — needed only for npm run worker / memories");
   }
 
-  if (process.env.ANTHROPIC_API_KEY) {
+  if (process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY.endsWith("...")) {
     try {
       const { default: Anthropic } = await import("@anthropic-ai/sdk");
       await new Anthropic().models.retrieve(process.env.RANK_MODEL ?? "claude-opus-5");
