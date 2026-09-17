@@ -14,6 +14,12 @@ export interface ProcessedVideo {
   duration: number;
 }
 
+/** MediaRecorder's webm often reports duration = Infinity; the camera registers the real length here. */
+const knownDurations = new WeakMap<File, number>();
+export function registerDuration(file: File, seconds: number): void {
+  knownDurations.set(file, seconds);
+}
+
 export function isVideoFile(file: File): boolean {
   return file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|3gp)$/i.test(file.name);
 }
@@ -45,7 +51,7 @@ export async function processVideo(file: File): Promise<ProcessedVideo> {
   v.src = url;
   try {
     await waitEvent(v, "loadedmetadata", 20_000);
-    const duration = Number.isFinite(v.duration) ? v.duration : 0;
+    const duration = Number.isFinite(v.duration) ? v.duration : (knownDurations.get(file) ?? 0);
     if (duration > MEDIA.MAX_VIDEO_SECONDS) throw new VideoError("too-long");
     // iOS only paints frames to a canvas after play() has been called once.
     await v.play().catch(() => undefined);

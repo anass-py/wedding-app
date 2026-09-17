@@ -23,7 +23,12 @@ npm run dev
 
 Open the printed URL. Without Supabase keys the app runs in **demo mode** with placeholder
 photos so you can feel the wall, the Top tab and the upload flow. Open it on your phone via the
-`Network:` URL Vite prints (same WiFi) to try the real camera.
+`Network:` URL Vite prints (same WiFi).
+
+The in-app camera (tap = photo, hold = video, flip) needs HTTPS — browsers refuse camera access on
+plain `http://192.168…`. For phone testing on the LAN run `npm run dev:https` instead and accept
+the self-signed certificate warning once; on plain http the app falls back to the phone's own
+camera app. Deployed on Vercel it's HTTPS already.
 
 Edit [src/config.ts](src/config.ts) for your names, date, hashtag and the look: `theme: "midnight"`
 (dark, evening) or `theme: "ivory"` (cream invitation-card look, daytime).

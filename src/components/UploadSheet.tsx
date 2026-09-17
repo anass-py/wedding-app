@@ -5,6 +5,7 @@ import { buzz } from "../lib/haptics";
 import { ImageError } from "../lib/image";
 import type { Api, Photo } from "../lib/types";
 import { VideoError, isVideoFile } from "../lib/video";
+import { Camera, isCameraSupported } from "./Camera";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -36,6 +37,8 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
   const [picked, setPicked] = useState<Picked[]>([]);
   const [caption, setCaption] = useState("");
   const [progress, setProgress] = useState<{ i: number; n: number; p: number } | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const inAppCamera = isCameraSupported();
 
   useEffect(() => () => picked.forEach((p) => URL.revokeObjectURL(p.url)), [picked]);
 
@@ -96,21 +99,35 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
 
         {picked.length === 0 ? (
           <div className="sheet__choices">
-            <button className="bigbtn" onClick={() => cameraRef.current?.click()}>
-              <span className="bigbtn__icon">
-                <Icon name="camera" size={24} />
-              </span>
-              {t("takePhoto")}
-            </button>
-            <button className="bigbtn" onClick={() => videoRef.current?.click()}>
-              <span className="bigbtn__icon">
-                <Icon name="video" size={24} />
-              </span>
-              <span className="bigbtn__text">
-                {t("recordVideo")}
-                <span className="bigbtn__hint">{t("videoHint", { s: MEDIA.MAX_VIDEO_SECONDS, mb: MEDIA.MAX_VIDEO_MB })}</span>
-              </span>
-            </button>
+            {inAppCamera ? (
+              <button className="bigbtn" onClick={() => setCameraOpen(true)}>
+                <span className="bigbtn__icon">
+                  <Icon name="camera" size={24} />
+                </span>
+                <span className="bigbtn__text">
+                  {t("camera")}
+                  <span className="bigbtn__hint">{t("cameraHint")}</span>
+                </span>
+              </button>
+            ) : (
+              <>
+                <button className="bigbtn" onClick={() => cameraRef.current?.click()}>
+                  <span className="bigbtn__icon">
+                    <Icon name="camera" size={24} />
+                  </span>
+                  {t("takePhoto")}
+                </button>
+                <button className="bigbtn" onClick={() => videoRef.current?.click()}>
+                  <span className="bigbtn__icon">
+                    <Icon name="video" size={24} />
+                  </span>
+                  <span className="bigbtn__text">
+                    {t("recordVideo")}
+                    <span className="bigbtn__hint">{t("videoHint", { s: MEDIA.MAX_VIDEO_SECONDS, mb: MEDIA.MAX_VIDEO_MB })}</span>
+                  </span>
+                </button>
+              </>
+            )}
             <button className="bigbtn" onClick={() => galleryRef.current?.click()}>
               <span className="bigbtn__icon">
                 <Icon name="image" size={24} />
@@ -141,7 +158,7 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
                 </div>
               ))}
               {!progress && (
-                <button className="picked__add" onClick={() => galleryRef.current?.click()}>
+                <button className="picked__add" onClick={() => (inAppCamera ? setCameraOpen(true) : galleryRef.current?.click())}>
                   + {t("addMore")}
                 </button>
               )}
@@ -170,6 +187,15 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
           </>
         )}
       </div>
+      {cameraOpen && (
+        <Camera
+          onClose={() => setCameraOpen(false)}
+          onCapture={(file) => {
+            setPicked((prev) => [...prev, { file, url: URL.createObjectURL(file), video: isVideoFile(file) }]);
+            setCameraOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,9 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default defineConfig({
   plugins: [
+    // `npm run dev:https` — self-signed HTTPS so the in-app camera works on a phone over LAN.
+    ...(process.env.VITE_HTTPS ? [basicSsl()] : []),
     react(),
     VitePWA({
       registerType: "autoUpdate",

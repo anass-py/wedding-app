@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { Photo } from "../lib/types";
 import { formatDuration } from "../lib/video";
+import { buzz } from "../lib/haptics";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 
@@ -15,7 +16,11 @@ interface Props {
   resetKey?: number;
   /** A heart that just arrived from another guest; a ♥ floats up on that card. */
   pulse?: { key: number; photoId: string } | null;
+  /** Double-tap on a card hearts it (never un-hearts). */
+  onHeart?: (photo: Photo) => void;
 }
+
+const DOUBLE_TAP_MS = 280;
 
 const BATCH = 60;
 
@@ -41,7 +46,7 @@ function distribute(photos: Photo[], cols: number): Photo[][] {
   return columns;
 }
 
-export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }: Props) {
+export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, onHeart }: Props) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(2);
@@ -115,6 +120,28 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
     return () => window.clearTimeout(id);
   }, [pulse]);
 
+  // Single tap opens (after a short wait), double tap hearts with a big ♥ on the card.
+  const lastTap = useRef<{ id: string; t: number } | null>(null);
+  const pendingOpen = useRef(0);
+  const [likeFlash, setLikeFlash] = useState<{ photoId: string; key: number } | null>(null);
+  const onCardClick = (p: Photo) => {
+    const now = performance.now();
+    if (onHeart && lastTap.current?.id === p.id && now - lastTap.current.t < DOUBLE_TAP_MS) {
+      window.clearTimeout(pendingOpen.current);
+      lastTap.current = null;
+      setLikeFlash({ photoId: p.id, key: now });
+      if (!p.hearted) {
+        onHeart(p);
+        buzz();
+      }
+      return;
+    }
+    lastTap.current = { id: p.id, t: now };
+    window.clearTimeout(pendingOpen.current);
+    pendingOpen.current = window.setTimeout(() => onSelect(p), onHeart ? DOUBLE_TAP_MS : 0);
+  };
+  useEffect(() => () => window.clearTimeout(pendingOpen.current), []);
+
   const columns = useMemo(() => distribute(visible, cols), [visible, cols]);
 
   return (
@@ -132,13 +159,22 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
                 key={p.id}
                 className={"card" + (isNew(p.id) ? " card--new" : "")}
                 style={firstPaint ? { animationDelay: `${Math.min(j, 8) * 70 + i * 35}ms` } : undefined}
-                onClick={() => onSelect(p)}
+                onClick={() => onCardClick(p)}
               >
                 <span className="card__img" style={{ aspectRatio: `1 / ${ratio(p)}` }}>
-                  <FadeImg src={urlFor(p.thumb_path)} alt={p.caption ?? ""} />
+                  {p.kind === "video" ? (
+                    <AutoVideo src={urlFor(p.path)} poster={urlFor(p.thumb_path)} />
+                  ) : (
+                    <FadeImg src={urlFor(p.thumb_path)} alt={p.caption ?? ""} />
+                  )}
                   {p.kind === "video" && (
                     <span className="card__video">
                       <Icon name="play" size={11} fill strokeWidth={0} /> {formatDuration(p.duration)}
+                    </span>
+                  )}
+                  {likeFlash?.photoId === p.id && (
+                    <span key={likeFlash.key} className="bigheart bigheart--card" aria-hidden="true">
+                      ♥
                     </span>
                   )}
                   {highlight?.has(p.id) && (
@@ -172,6 +208,28 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse }
       </div>
     </div>
   );
+}
+
+/** Muted, looping video that plays only while mostly on screen — like Shorts/Reels in a feed. */
+function AutoVideo({ src, poster }: { src: string; poster: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) el.play().catch(() => undefined);
+        else el.pause();
+      },
+      { threshold: [0, 0.6] },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      el.pause();
+    };
+  }, []);
+  return <video ref={ref} src={src} poster={poster} muted playsInline loop preload="metadata" className="loaded" />;
 }
 
 /** Image that fades in once decoded (also when it comes straight from cache). */

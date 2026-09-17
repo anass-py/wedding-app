@@ -167,6 +167,7 @@ export default function App() {
                 highlight={topIds}
                 resetKey={wallReset}
                 pulse={pulse}
+                onHeart={toggleHeart}
               />
             ) : (
               <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
