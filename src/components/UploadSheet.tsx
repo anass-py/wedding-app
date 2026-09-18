@@ -40,17 +40,28 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const inAppCamera = isCameraSupported();
 
-  useEffect(() => () => picked.forEach((p) => URL.revokeObjectURL(p.url)), [picked]);
+  // Revoke preview URLs only when the sheet goes away (or an item is removed), never on every change.
+  const urls = useRef<Set<string>>(new Set());
+  useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
   const addFiles = (list: FileList | null) => {
     if (!list) return;
     const next = Array.from(list)
       .filter((f) => f.type.startsWith("image/") || isVideoFile(f) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name))
       .map((file) => ({ file, url: URL.createObjectURL(file), video: isVideoFile(file) }));
+    next.forEach((p) => urls.current.add(p.url));
     setPicked((prev) => [...prev, ...next]);
   };
 
-  const removeAt = (i: number) => setPicked((prev) => prev.filter((_, j) => j !== i));
+  const removeAt = (i: number) =>
+    setPicked((prev) => {
+      const gone = prev[i];
+      if (gone) {
+        URL.revokeObjectURL(gone.url);
+        urls.current.delete(gone.url);
+      }
+      return prev.filter((_, j) => j !== i);
+    });
 
   const explain = (e: unknown): string => {
     if (e instanceof ImageError) return t("unsupportedImage");
@@ -191,7 +202,9 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
         <Camera
           onClose={() => setCameraOpen(false)}
           onCapture={(file) => {
-            setPicked((prev) => [...prev, { file, url: URL.createObjectURL(file), video: isVideoFile(file) }]);
+            const url = URL.createObjectURL(file);
+            urls.current.add(url);
+            setPicked((prev) => [...prev, { file, url, video: isVideoFile(file) }]);
             setCameraOpen(false);
           }}
         />

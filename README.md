@@ -2,8 +2,7 @@
 
 A web app (PWA) your guests open by scanning a QR code. They type their first name, optionally
 snap a selfie, and start posting photos — from the camera or their gallery. Everyone sees the
-photos appear live on a Pinterest-style wall (with an Apple-Watch-style "bubbles" view one tap
-away). Tapping a photo shows who took it.
+photos appear live on a Pinterest-style wall. Tapping a photo opens it full screen with who took it.
 A **Top 5** tab ranks the best photos overall and by theme (bride & groom, decoration, dance
 floor…) using Claude vision blended with guest ❤️.
 
@@ -11,7 +10,7 @@ floor…) using Claude vision blended with guest ❤️.
 - Posting is a moment: the photo springs in with a burst of sparks, then lands on the wall.
 - Swipeable viewer with share, live floating hearts, a Top 5 that reads like a magazine spread.
 - `/tv` — a live slideshow with a QR code for the venue screen.
-- English / French toggle.
+- French UI (strings for English are still in `src/i18n.tsx` if you ever want a toggle back).
 - Photos are resized in the browser before upload (fast on venue WiFi, tiny storage bill).
 
 ## 1. Run it locally (2 minutes, no account needed)
@@ -154,8 +153,8 @@ src/
   App.tsx                 shell: header, wall/top tabs, upload FAB, detail overlay
   config.ts               names, themes, ranking weights          ← edit me
   i18n.tsx                EN/FR strings
-  components/Masonry      the default wall: Pinterest-style columns, "N new" pill when scrolled
-  components/Honeycomb    alternate wall: Apple-Watch-style bubbles (hex spiral, fisheye, inertia)
+  components/Masonry      the wall: Pinterest-style columns, "N new" pill when scrolled, autoplaying videos
+  components/Camera       Snapchat-style camera (tap photo / hold video / double-tap flip)
   components/TopPhotos    Top 5 overall / per theme
   components/PhotoDetail  full photo, author, hearts, delete own
   components/UploadSheet  camera / gallery picker, multi-upload

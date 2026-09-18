@@ -3,8 +3,6 @@ import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
 import { Icon } from "./components/Icon";
-import { Honeycomb } from "./components/Honeycomb";
-import { LangToggle } from "./components/LangToggle";
 import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
 import { PhotoDetail } from "./components/PhotoDetail";
@@ -21,15 +19,9 @@ import type { Guest, Photo } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
-type View = "grid" | "bubbles";
-const VIEW_KEY = "wedding.view";
-
-function initialView(): View {
-  try {
-    return localStorage.getItem(VIEW_KEY) === "bubbles" ? "bubbles" : "grid";
-  } catch {
-    return "grid";
-  }
+function formatDate(iso: string): string {
+  const d = new Date(iso + "T12:00:00");
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
 export default function App() {
@@ -41,7 +33,6 @@ export default function App() {
   const [welcome, setWelcome] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("wall");
-  const [view, setViewState] = useState<View>(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -65,15 +56,6 @@ export default function App() {
       });
   }, [api]);
 
-  const setView = useCallback((v: View) => {
-    setViewState(v);
-    try {
-      localStorage.setItem(VIEW_KEY, v);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2500);
@@ -91,6 +73,8 @@ export default function App() {
   // Keep the detail view in sync with live heart/score updates.
   const selected = selectedId ? (photos.find((p) => p.id === selectedId) ?? null) : null;
   const topIds = useMemo(() => new Set(topPhotos(photos, "all").map((p) => p.id)), [photos]);
+  const videoCount = useMemo(() => photos.filter((p) => p.kind === "video").length, [photos]);
+  const photoCount = photos.length - videoCount;
 
   if (stage === "loading") {
     return (
@@ -119,38 +103,25 @@ export default function App() {
     <div className="app">
       {api.isDemo && <div className="banner">{t("demoBanner")}</div>}
       <header className="header">
-        <div>
+        <div className="header__brand">
           <div className="header__title">{WEDDING.couple}</div>
-          <div className="header__sub muted">{t("photosCount", { n: photos.length })}</div>
+          <div className="header__date">{formatDate(WEDDING.date)}</div>
+          <div className="header__sub">
+            <span className="header__live">
+              <span className="live-dot" /> {t("live")}
+            </span>
+            <span className="header__dot" aria-hidden="true" />
+            <span>
+              {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
+              {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
+            </span>
+          </div>
         </div>
-        <div className="header__right">
-          {tab === "wall" && (
-            <div className="viewtoggle" role="group">
-              <button
-                className={view === "grid" ? "on" : ""}
-                onClick={() => setView("grid")}
-                aria-label={t("viewGrid")}
-                aria-pressed={view === "grid"}
-              >
-                <Icon name="grid" size={16} />
-              </button>
-              <button
-                className={view === "bubbles" ? "on" : ""}
-                onClick={() => setView("bubbles")}
-                aria-label={t("viewBubbles")}
-                aria-pressed={view === "bubbles"}
-              >
-                <Icon name="bubbles" size={16} />
-              </button>
-            </div>
-          )}
-          <LangToggle />
-          {guest && (
-            <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
-              <Avatar guest={guest} urlFor={api.urlFor} size={32} />
-            </button>
-          )}
-        </div>
+        {guest && (
+          <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
+            <Avatar guest={guest} urlFor={api.urlFor} size={36} />
+          </button>
+        )}
       </header>
 
       <main className="main">
@@ -159,7 +130,7 @@ export default function App() {
           <>
             {loading && photos.length === 0 ? (
               <SkeletonGrid />
-            ) : view === "grid" ? (
+            ) : (
               <Masonry
                 photos={photos}
                 urlFor={api.urlFor}
@@ -169,8 +140,6 @@ export default function App() {
                 pulse={pulse}
                 onHeart={toggleHeart}
               />
-            ) : (
-              <Honeycomb photos={photos} urlFor={api.urlFor} onSelect={(p) => setSelectedId(p.id)} highlight={topIds} />
             )}
             {!loading && photos.length === 0 && (
               <div className="empty">
@@ -188,17 +157,17 @@ export default function App() {
       </main>
 
       <nav className="nav">
-        <button className={"nav__btn" + (tab === "wall" ? " nav__btn--on" : "")} onClick={() => setTab("wall")}>
-          <Icon name="grid" size={24} strokeWidth={tab === "wall" ? 2 : 1.6} />
-          {t("wall")}
-        </button>
-        <button className="fab" onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
-          <Icon name="plus" size={30} strokeWidth={2.4} />
-        </button>
-        <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")}>
-          <Icon name="star" size={24} fill={tab === "top"} strokeWidth={1.6} />
-          {t("top")}
-        </button>
+        <div className="nav__pill">
+          <button className={"nav__btn" + (tab === "wall" ? " nav__btn--on" : "")} onClick={() => setTab("wall")} aria-label={t("wall")}>
+            <Icon name="grid" size={24} strokeWidth={tab === "wall" ? 2 : 1.6} />
+          </button>
+          <button className="fab" onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
+            <Icon name="plus" size={28} strokeWidth={2.4} />
+          </button>
+          <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")} aria-label={t("top")}>
+            <Icon name="star" size={24} fill={tab === "top"} strokeWidth={1.6} />
+          </button>
+        </div>
       </nav>
 
       {selected && (

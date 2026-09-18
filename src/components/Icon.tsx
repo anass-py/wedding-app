@@ -46,6 +46,19 @@ const paths: Record<string, ReactNode> = {
     </>
   ),
   play: <path d="M7 4.5v15l12-7.5z" />,
+  pause: <path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" />,
+  sound: (
+    <>
+      <path d="M4 9.5v5h3.5l4.5 3.8V5.7L7.5 9.5z" />
+      <path d="M15.5 8.8a4.6 4.6 0 0 1 0 6.4M18.3 6a8.5 8.5 0 0 1 0 12" />
+    </>
+  ),
+  muted: (
+    <>
+      <path d="M4 9.5v5h3.5l4.5 3.8V5.7L7.5 9.5z" />
+      <path d="M16 9.5l5 5M21 9.5l-5 5" />
+    </>
+  ),
   video: (
     <>
       <rect x="3" y="6.5" width="13" height="11" rx="2" />
@@ -59,6 +72,8 @@ const paths: Record<string, ReactNode> = {
       <path d="M14.5 15.5h-1.6v-1.6M9.5 11.5h1.6v1.6" />
     </>
   ),
+  fit: <path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15M9.5 9.5h5v5h-5z" />,
+  fill: <path d="M4.5 9V4.5H9M15 4.5h4.5V9M4.5 15v4.5H9M19.5 15v4.5H15M8 8l3 3M16 8l-3 3M8 16l3-3M16 16l-3-3" />,
   user: (
     <>
       <circle cx="12" cy="8.5" r="3.8" />

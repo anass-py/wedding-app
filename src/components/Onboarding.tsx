@@ -4,7 +4,6 @@ import { useI18n } from "../i18n";
 import { processAvatar } from "../lib/image";
 import type { Api, Guest } from "../lib/types";
 import { Icon } from "./Icon";
-import { LangToggle } from "./LangToggle";
 
 interface Props {
   api: Api;
@@ -44,9 +43,6 @@ export function Onboarding({ api, onJoined }: Props) {
 
   return (
     <div className="onboarding">
-      <div className="onboarding__lang">
-        <LangToggle />
-      </div>
       <div className="onboarding__card">
         <p className="eyebrow">{t("welcome")}</p>
         <h1 className="display">{WEDDING.couple}</h1>

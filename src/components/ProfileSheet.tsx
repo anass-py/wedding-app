@@ -5,7 +5,6 @@ import { processAvatar } from "../lib/image";
 import type { Api, Guest, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
-import { LangToggle } from "./LangToggle";
 
 interface Props {
   api: Api;
@@ -61,7 +60,6 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         <div className="sheet__handle" />
         <div className="profile__head">
           <p className="eyebrow">{t("profile")}</p>
-          <LangToggle />
         </div>
         <input
           ref={fileRef}

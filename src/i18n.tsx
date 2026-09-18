@@ -49,6 +49,10 @@ const en = {
   topSub: "Picked by our AI judge and your ❤️",
   aiPick: "AI pick",
   photosCount: "{n} photos",
+  videosCount: "{n} videos",
+  photoOne: "1 photo",
+  videoOne: "1 video",
+  live: "live",
   justNow: "just now",
   minutesAgo: "{n} min ago",
   hoursAgo: "{n} h ago",
@@ -62,6 +66,11 @@ const en = {
   celebrateMany: "{n} photos are on the wall for everyone.",
   openFull: "Save",
   share: "Share",
+  mute: "Mute",
+  unmute: "Unmute",
+  sound: "Sound",
+  tapForSound: "Tap the speaker for sound",
+  fit: "Show the whole photo",
   demoBanner: "Demo mode — add your Supabase keys in .env to go live.",
   connecting: "Connecting…",
   hearts: "hearts",
@@ -140,6 +149,10 @@ const fr: Dict = {
   topSub: "Choisies par notre juge IA et vos ❤️",
   aiPick: "Choix de l'IA",
   photosCount: "{n} photos",
+  videosCount: "{n} vidéos",
+  photoOne: "1 photo",
+  videoOne: "1 vidéo",
+  live: "en direct",
   justNow: "à l'instant",
   minutesAgo: "il y a {n} min",
   hoursAgo: "il y a {n} h",
@@ -153,6 +166,11 @@ const fr: Dict = {
   celebrateMany: "{n} photos sont sur le mur, pour tout le monde.",
   openFull: "Enregistrer",
   share: "Partager",
+  mute: "Muet",
+  unmute: "Son",
+  sound: "Son",
+  tapForSound: "Touchez le haut-parleur pour le son",
+  fit: "Voir la photo entière",
   demoBanner: "Mode démo — clés Supabase manquantes dans .env",
   connecting: "Connexion…",
   hearts: "cœurs",
@@ -203,7 +221,7 @@ function initialLang(): Lang {
   } catch {
     /* private mode */
   }
-  return navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
+  return "fr";
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
