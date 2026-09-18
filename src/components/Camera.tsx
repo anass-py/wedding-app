@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { MEDIA } from "../config";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
@@ -35,7 +35,7 @@ function pickMimeType(): string | undefined {
 }
 
 const HOLD_MS = 220;
-const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_MS = 320;
 const MAX_MS = MEDIA.MAX_RECORD_SECONDS * 1000;
 const RECORD_MAX_SIDE = 1280;
 
@@ -67,64 +67,89 @@ function drawCover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, mirror: b
 }
 
 /**
- * Snapchat-style camera: tap the shutter for a photo, hold to record, double-tap
- * the view (or the flip button) to switch cameras — also while recording. The
- * recorder reads an off-screen canvas fed by whichever camera is live, so a
- * switch never interrupts it; the microphone track is kept across switches.
+ * Snapchat-style camera.
+ *  - tap the shutter: photo · hold it: video starts and keeps recording hands-free · tap again: stop
+ *  - double-tap the viewfinder (or the flip button): switch camera, also while recording
+ * The recorder reads an off-screen canvas painted from whichever camera is live and an audio
+ * graph that the current microphone is plugged into, so a switch never interrupts the clip.
  */
 export function Camera({ onCapture, onClose }: Props) {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const camStream = useRef<MediaStream | null>(null);
-  const audioTrack = useRef<MediaStreamTrack | null>(null);
+  const audioCtx = useRef<AudioContext | null>(null);
+  const audioDest = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const micSource = useRef<MediaStreamAudioSourceNode | null>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const holdTimer = useRef(0);
   const ticker = useRef(0);
   const startedAt = useRef(0);
-  const pressed = useRef(false);
+  const press = useRef<{ startedRecording: boolean; stopOnRelease: boolean } | null>(null);
   const drawing = useRef(false);
   const facingRef = useRef<Facing>("environment");
+  const mirrorRef = useRef(false);
   const lastTap = useRef(0);
   const switching = useRef(false);
 
-  const [facing, setFacing] = useState<Facing>("environment");
   const [ready, setReady] = useState(false);
+  const [mirrored, setMirrored] = useState(false); // flips only once the new camera's frames arrive
   const [twoCameras, setTwoCameras] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [preview, setPreview] = useState<{ file: File; url: string; video: boolean } | null>(null);
-  facingRef.current = facing;
+  mirrorRef.current = mirrored;
+
+  /** Plug the current microphone into one stable output track the recorder listens to. */
+  const routeMic = (track: MediaStreamTrack | undefined) => {
+    if (!track) return;
+    try {
+      const ac = (audioCtx.current ??= new AudioContext());
+      audioDest.current ??= ac.createMediaStreamDestination();
+      micSource.current?.disconnect();
+      micSource.current = ac.createMediaStreamSource(new MediaStream([track]));
+      micSource.current.connect(audioDest.current);
+      if (ac.state === "suspended") void ac.resume();
+    } catch {
+      /* no WebAudio: the raw track is used instead (see startRecording) */
+    }
+  };
 
   const stopAll = useCallback(() => {
     camStream.current?.getTracks().forEach((tr) => tr.stop());
     camStream.current = null;
-    audioTrack.current?.stop();
-    audioTrack.current = null;
+    micSource.current?.disconnect();
+    void audioCtx.current?.close().catch(() => undefined);
+    audioCtx.current = null;
+    audioDest.current = null;
   }, []);
 
-  /** Open (or switch to) a camera. The mic is requested once and kept. */
+  /** Open (or switch to) a camera. Order matters on iOS: stop the old camera before asking for the next. */
   const openCamera = useCallback(
     async (mode: Facing) => {
       if (switching.current) return;
       switching.current = true;
+      const old = camStream.current;
+      old?.getVideoTracks().forEach((tr) => tr.stop());
       try {
         const s = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: mode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: !audioTrack.current,
+          audio: true,
         });
-        const audio = s.getAudioTracks()[0];
-        if (audio && !audioTrack.current) audioTrack.current = audio;
-        camStream.current?.getVideoTracks().forEach((tr) => tr.stop());
+        old?.getAudioTracks().forEach((tr) => tr.stop());
         camStream.current = s;
+        facingRef.current = mode;
+        routeMic(s.getAudioTracks()[0]);
         const v = videoRef.current;
         if (v) {
           v.srcObject = new MediaStream(s.getVideoTracks());
           await v.play().catch(() => undefined);
         }
+        setMirrored(mode === "user");
         setReady(true);
+        setError(null);
         const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
         setTwoCameras(devices.filter((d) => d.kind === "videoinput").length > 1);
       } catch (e) {
@@ -146,32 +171,21 @@ export function Camera({ onCapture, onClose }: Props) {
     };
   }, [openCamera, stopAll]);
 
-  // Re-attach the preview after a photo/video preview is dismissed (the <video> remounts).
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!preview && v && camStream.current && !v.srcObject) {
-      v.srcObject = new MediaStream(camStream.current.getVideoTracks());
-      void v.play().catch(() => undefined);
-    }
-  }, [preview]);
-
   const flip = () => {
-    if (!ready || preview || !twoCameras) return;
-    const next: Facing = facingRef.current === "user" ? "environment" : "user";
-    setFacing(next);
+    if (!ready || preview || !twoCameras || switching.current) return;
     buzz(6);
-    void openCamera(next);
+    void openCamera(facingRef.current === "user" ? "environment" : "user");
   };
 
-  const onViewTap = () => {
+  // Raw pointer-downs, not clicks: works with a second finger while the first holds the shutter.
+  const onViewPointerDown = (e: RPointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     const now = performance.now();
     if (now - lastTap.current < DOUBLE_TAP_MS) {
       lastTap.current = 0;
       flip();
     } else lastTap.current = now;
   };
-
-  const mirrored = facing === "user";
 
   const takePhoto = () => {
     const v = videoRef.current;
@@ -181,7 +195,7 @@ export function Camera({ onCapture, onClose }: Props) {
     c.height = v.videoHeight;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    drawCover(ctx, v, mirrored);
+    drawCover(ctx, v, mirrorRef.current);
     c.toBlob(
       (blob) => {
         if (!blob) return;
@@ -200,20 +214,20 @@ export function Camera({ onCapture, onClose }: Props) {
     const rec = recorder.current;
     if (rec && rec.state !== "inactive") rec.stop();
     setRecording(false);
+    buzz(10);
   }, []);
 
   const startRecording = () => {
     const v = videoRef.current;
     if (!v || !v.videoWidth) return;
-    // Off-screen canvas fed by the live camera → survives camera switches.
     const scale = Math.min(1, RECORD_MAX_SIDE / Math.max(v.videoWidth, v.videoHeight));
     const c = canvas.current ?? (canvas.current = document.createElement("canvas"));
     c.width = Math.round(v.videoWidth * scale);
     c.height = Math.round(v.videoHeight * scale);
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    const canvasStream = c.captureStream(30);
-    const tracks = [...canvasStream.getVideoTracks(), ...(audioTrack.current ? [audioTrack.current] : [])];
+    const audio = audioDest.current?.stream.getAudioTracks()[0] ?? camStream.current?.getAudioTracks()[0];
+    const tracks = [...c.captureStream(30).getVideoTracks(), ...(audio ? [audio] : [])];
     const mimeType = pickMimeType();
     let rec: MediaRecorder;
     try {
@@ -231,17 +245,16 @@ export function Camera({ onCapture, onClose }: Props) {
       const ext = type.includes("mp4") ? "mp4" : "webm";
       const file = new File(chunks.current, `clip-${Date.now()}.${ext}`, { type });
       registerDuration(file, seconds);
-      if (seconds < 0.6 || file.size === 0) return; // an accidental long-ish press
+      if (seconds < 0.6 || file.size === 0) return;
       setPreview({ file, url: URL.createObjectURL(file), video: true });
     };
     recorder.current = rec;
 
-    // Paint frames as they arrive (or every animation frame where rVFC is missing).
     drawing.current = true;
     const paint = () => {
       if (!drawing.current) return;
       const live = videoRef.current;
-      if (live && live.readyState >= 2) drawCover(ctx, live, facingRef.current === "user");
+      if (live && live.readyState >= 2) drawCover(ctx, live, mirrorRef.current);
       const rvfc = live as (HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number }) | null;
       if (rvfc?.requestVideoFrameCallback) rvfc.requestVideoFrameCallback(paint);
       else requestAnimationFrame(paint);
@@ -262,17 +275,26 @@ export function Camera({ onCapture, onClose }: Props) {
 
   const onShutterDown = () => {
     if (!ready || preview) return;
-    pressed.current = true;
-    holdTimer.current = window.setTimeout(() => {
-      if (pressed.current) startRecording();
-    }, HOLD_MS);
+    void audioCtx.current?.resume().catch(() => undefined);
+    const isRecording = recorder.current?.state === "recording";
+    press.current = { startedRecording: false, stopOnRelease: isRecording };
+    if (!isRecording) {
+      holdTimer.current = window.setTimeout(() => {
+        if (press.current) {
+          press.current.startedRecording = true;
+          startRecording();
+        }
+      }, HOLD_MS);
+    }
   };
   const onShutterUp = () => {
-    if (!pressed.current) return;
-    pressed.current = false;
+    const p = press.current;
+    if (!p) return;
+    press.current = null;
     window.clearTimeout(holdTimer.current);
-    if (recorder.current && recorder.current.state === "recording") stopRecording();
-    else if (ready && !preview) takePhoto();
+    if (p.stopOnRelease) stopRecording(); // tap while recording = stop
+    else if (!p.startedRecording && ready && !preview) takePhoto(); // short tap = photo
+    // a hold that started the recording: lifting the finger keeps recording (hands-free)
   };
 
   const retake = () => {
@@ -292,16 +314,15 @@ export function Camera({ onCapture, onClose }: Props) {
 
   return (
     <div className="cam" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-      {!preview && (
-        <video
-          ref={videoRef}
-          className={"cam__view" + (mirrored ? " cam__view--mirror" : "")}
-          autoPlay
-          muted
-          playsInline
-          onClick={onViewTap}
-        />
-      )}
+      {/* The live view stays mounted (hidden under a preview) so the camera never has to restart. */}
+      <video
+        ref={videoRef}
+        className={"cam__view" + (mirrored ? " cam__view--mirror" : "") + (preview ? " cam__view--hidden" : "")}
+        autoPlay
+        muted
+        playsInline
+        onPointerDown={onViewPointerDown}
+      />
       {preview &&
         (preview.video ? (
           <video className="cam__view" src={preview.url} autoPlay loop muted playsInline />
@@ -319,7 +340,7 @@ export function Camera({ onCapture, onClose }: Props) {
           </span>
         )}
         {!preview && twoCameras && (
-          <button className="cam__round" onClick={flip} aria-label={t("flipCamera")}>
+          <button className="cam__round" onPointerDown={flip} aria-label={t("flipCamera")}>
             <Icon name="flip" size={22} />
           </button>
         )}
@@ -344,7 +365,7 @@ export function Camera({ onCapture, onClose }: Props) {
             onPointerCancel={onShutterUp}
             onPointerLeave={onShutterUp}
             onContextMenu={(e) => e.preventDefault()}
-            aria-label={t("takePhoto")}
+            aria-label={recording ? t("stop") : t("takePhoto")}
             disabled={!ready}
           >
             <svg className="shutter__ring" viewBox="0 0 80 80" aria-hidden="true">
