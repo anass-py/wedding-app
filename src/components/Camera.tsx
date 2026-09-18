@@ -357,7 +357,6 @@ export function Camera({ onCapture, onClose }: Props) {
 
       {!preview && !error && (
         <div className="cam__bottom">
-          <p className="cam__hint">{recording ? t("releaseToStop") : t("shutterHint")}</p>
           <button
             className={"shutter" + (recording ? " shutter--rec" : "")}
             onPointerDown={onShutterDown}

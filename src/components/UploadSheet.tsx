@@ -115,10 +115,7 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
                 <span className="bigbtn__icon">
                   <Icon name="camera" size={24} />
                 </span>
-                <span className="bigbtn__text">
-                  {t("camera")}
-                  <span className="bigbtn__hint">{t("cameraHint")}</span>
-                </span>
+                {t("camera")}
               </button>
             ) : (
               <>
