@@ -595,3 +595,23 @@ img { display: block; }
 .socials__row { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 .socials__row .icon { flex-shrink: 0; color: var(--gold); }
 .input--slim { padding: 10px 12px; }
+
+/* ── Join with a network ───────────────────────────────────── */
+.onboarding__mode { width: 100%; }
+.onboarding__card > .onboarding__body { animation: rise 0.3s both; animation-delay: 0s; display: grid; gap: 14px; }
+.onboarding__note { margin: 4px 0 0; }
+.socialpick { display: flex; justify-content: center; gap: 14px; padding: 6px 0 2px; }
+.socialpick__btn { display: grid; justify-items: center; gap: 7px; color: var(--muted); animation: bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.8s); transition: color 0.2s; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-4px) rotate(-3deg); } 75% { transform: translateY(3px) rotate(3deg); } }
+.socialpick__icon {
+  width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: var(--bg3);
+  border: 1px solid var(--ring); transition: transform 0.25s cubic-bezier(0.2, 1.4, 0.3, 1), box-shadow 0.25s, border-color 0.25s, background 0.25s;
+}
+.socialpick__btn:active .socialpick__icon { transform: scale(0.9); }
+.socialpick__btn--on { color: var(--text); animation-play-state: paused; }
+.socialpick__btn--on .socialpick__icon { transform: scale(1.12); border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 25%, transparent), 0 10px 30px color-mix(in srgb, var(--brand) 35%, transparent); background: color-mix(in srgb, var(--brand) 14%, var(--bg3)); }
+.socialpick__btn--on .socialpick__icon .icon { color: var(--brand); }
+.socialpick__label { font-size: 11px; letter-spacing: 0.04em; }
+.handlefield { position: relative; display: block; animation: rise 0.3s both; }
+.handlefield__at { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--brand); font-weight: 600; }
+.handlefield__input { padding-left: 32px; border-color: color-mix(in srgb, var(--brand) 45%, var(--ring)); }

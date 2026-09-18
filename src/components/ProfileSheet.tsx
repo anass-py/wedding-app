@@ -3,7 +3,7 @@ import { describeError } from "../lib/errors";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
 import type { Api, Guest, Photo } from "../lib/types";
-import { SOCIAL_KEYS, normalizeSocial, type SocialKey } from "../lib/socials";
+import { SOCIAL_KEYS, SOCIAL_META, normalizeSocial } from "../lib/socials";
 import type { Socials } from "../lib/types";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
@@ -90,19 +90,12 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
             {t("socialsTitle")} <span className="muted">· {t("socialsHint")}</span>
           </span>
           <div className="socials">
-            {(
-              [
-                ["instagram", "instagram", "Instagram"],
-                ["x", "x", "X"],
-                ["tiktok", "tiktok", "TikTok"],
-                ["website", "globe", t("website")],
-              ] as [SocialKey, "instagram" | "x" | "tiktok" | "globe", string][]
-            ).map(([k, icon, label]) => (
+            {SOCIAL_KEYS.map((k) => (
               <label key={k} className="socials__row">
-                <Icon name={icon} size={18} />
+                <Icon name={SOCIAL_META[k].icon} size={18} />
                 <input
                   className="input input--slim"
-                  placeholder={k === "website" ? "monsite.com" : `@${label.toLowerCase()}`}
+                  placeholder={k === "website" ? "monsite.com" : `@${SOCIAL_META[k].label.toLowerCase()}`}
                   value={socials[k] ?? ""}
                   maxLength={80}
                   autoCapitalize="none"

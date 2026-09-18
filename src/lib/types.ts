@@ -1,7 +1,9 @@
 export interface Socials {
   instagram?: string;
-  x?: string;
+  snapchat?: string;
   tiktok?: string;
+  facebook?: string;
+  x?: string;
   website?: string;
 }
 

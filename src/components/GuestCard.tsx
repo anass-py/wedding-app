@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import { topPhotos } from "../lib/ranking";
-import { SOCIAL_KEYS, socialLabel, socialUrl } from "../lib/socials";
+import { SOCIAL_KEYS, SOCIAL_META, socialLabel, socialUrl } from "../lib/socials";
 import type { Api, Guest, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
@@ -13,8 +13,6 @@ interface Props {
   api: Api;
   onClose: () => void;
 }
-
-const SOCIAL_ICON = { instagram: "instagram", x: "x", tiktok: "tiktok", website: "globe" } as const;
 
 /** Collectible-style guest card: number, name, socials, hearts, and what they posted. */
 export function GuestCard({ guest, photos, api, onClose }: Props) {
@@ -55,7 +53,7 @@ export function GuestCard({ guest, photos, api, onClose }: Props) {
   }, [photos, guest.id]);
 
   const socials = SOCIAL_KEYS.filter((k) => guest.socials?.[k]);
-  const handle = guest.socials?.instagram ?? guest.socials?.x ?? guest.socials?.tiktok ?? null;
+  const handle = SOCIAL_KEYS.filter((k) => k !== "website").map((k) => guest.socials?.[k]).find(Boolean) ?? null;
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
@@ -81,7 +79,7 @@ export function GuestCard({ guest, photos, api, onClose }: Props) {
           <div className="gcard__socials">
             {socials.map((k) => (
               <a key={k} className="gcard__social" href={socialUrl(k, guest.socials[k]!)} target="_blank" rel="noreferrer" aria-label={socialLabel(k, guest.socials[k]!)}>
-                <Icon name={SOCIAL_ICON[k]} size={20} />
+                <Icon name={SOCIAL_META[k].icon} size={20} />
               </a>
             ))}
           </div>

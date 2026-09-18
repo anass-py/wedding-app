@@ -3,8 +3,10 @@ import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import { describeError } from "../lib/errors";
 import type { Api, Guest } from "../lib/types";
+import { SOCIAL_META, normalizeSocial, type SocialKey } from "../lib/socials";
 import { AvatarPicker } from "./AvatarPicker";
 import { Icon } from "./Icon";
+import { SocialPicker } from "./SocialPicker";
 
 interface Props {
   api: Api;
@@ -13,18 +15,40 @@ interface Props {
 
 export function Onboarding({ api, onJoined }: Props) {
   const { t, lang, setLang } = useI18n();
+  const [mode, setMode] = useState<"name" | "social">("name");
   const [name, setName] = useState("");
-  const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
+  const [network, setNetwork] = useState<SocialKey | null>(null);
+  const [handle, setHandle] = useState("");
+  const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cleanHandle = network ? normalizeSocial(network, handle) : "";
+  const displayName = mode === "social" ? cleanHandle : name.trim();
+  const canJoin =
+    mode === "social" ? !!network && !!cleanHandle : !!name.trim();
+
   const join = async () => {
-    const trimmed = name.trim();
-    if (!trimmed || busy) return;
+    if (!canJoin || busy) return;
     setBusy(true);
     setError(null);
     try {
-      onJoined(await api.createGuest(trimmed, selfie?.blob));
+      const guest = await api.createGuest(displayName, selfie?.blob);
+      if (mode === "social" && network) {
+        try {
+          onJoined(
+            await api.updateGuest(displayName, undefined, {
+              [network]: cleanHandle,
+            }),
+          );
+          return;
+        } catch {
+          /* joined without the link; they can add it in their profile */
+        }
+      }
+      onJoined(guest);
     } catch (e) {
       setError(describeError(e));
       setBusy(false);
@@ -33,7 +57,10 @@ export function Onboarding({ api, onJoined }: Props) {
 
   return (
     <div className="onboarding">
-      <button className="onboarding__lang" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
+      <button
+        className="onboarding__lang"
+        onClick={() => setLang(lang === "fr" ? "en" : "fr")}
+      >
         {lang === "fr" ? "English" : "Français"}
       </button>
       <div className="onboarding__card">
@@ -51,7 +78,9 @@ export function Onboarding({ api, onJoined }: Props) {
               {t("addSelfie")} <span className="muted">({t("optional")})</span>
             </>
           }
-          onPicked={(blob) => setSelfie({ blob, url: URL.createObjectURL(blob) })}
+          onPicked={(blob) =>
+            setSelfie({ blob, url: URL.createObjectURL(blob) })
+          }
           onError={setError}
         >
           {selfie ? (
@@ -62,23 +91,77 @@ export function Onboarding({ api, onJoined }: Props) {
             </span>
           )}
         </AvatarPicker>
-        <label className="field">
-          <span>{t("yourName")}</span>
-          <input
-            className="input"
-            value={name}
-            placeholder={t("namePlaceholder")}
-            maxLength={40}
-            autoComplete="given-name"
-            enterKeyHint="go"
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void join()}
-          />
-        </label>
+        <div className="segmented onboarding__mode">
+          <button
+            type="button"
+            className={mode === "name" ? "on" : ""}
+            onClick={() => setMode("name")}
+          >
+            {t("joinWithName")}
+          </button>
+          <button
+            type="button"
+            className={mode === "social" ? "on" : ""}
+            onClick={() => setMode("social")}
+          >
+            {t("joinWithSocial")}
+          </button>
+        </div>
+
+        <div className="onboarding__body" key={mode}>
+          {mode === "name" ? (
+            <label className="field">
+              <span>{t("yourName")}</span>
+              <input
+                className="input"
+                value={name}
+                placeholder={t("namePlaceholder")}
+                maxLength={40}
+                autoComplete="given-name"
+                enterKeyHint="go"
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void join()}
+              />
+            </label>
+          ) : (
+            <div className="field">
+              <SocialPicker value={network} onChange={setNetwork} />
+              {network && (
+                <label
+                  className="handlefield"
+                  style={{ ["--brand" as string]: SOCIAL_META[network].color }}
+                >
+                  <span className="handlefield__at">@</span>
+                  <input
+                    className="input handlefield__input"
+                    value={handle}
+                    placeholder={t("handlePlaceholder", {
+                      network: SOCIAL_META[network].label,
+                    })}
+                    maxLength={60}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoFocus
+                    enterKeyHint="go"
+                    onChange={(e) =>
+                      setHandle(e.target.value.replace(/^@+/, ""))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && void join()}
+                  />
+                </label>
+              )}
+              <p className="muted small onboarding__note">{t("socialNote")}</p>
+            </div>
+          )}
+        </div>
 
         {error && <p className="error">{error}</p>}
 
-        <button className="btn btn--primary btn--block" onClick={join} disabled={!name.trim() || busy}>
+        <button
+          className="btn btn--primary btn--block"
+          onClick={join}
+          disabled={!canJoin || busy}
+        >
           {busy ? t("joining") : t("join")}
         </button>
       </div>
