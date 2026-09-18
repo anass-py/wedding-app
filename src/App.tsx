@@ -178,7 +178,7 @@ export default function App() {
           <button className={"nav__btn" + (tab === "wall" ? " nav__btn--on" : "")} onClick={() => setTab("wall")} aria-label={t("wall")}>
             <Icon name="grid" size={24} strokeWidth={tab === "wall" ? 2 : 1.6} />
           </button>
-          <button className="fab" onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
+          <button className={"fab" + (!loading && photos.length === 0 ? " fab--invite" : "")} onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
             <Icon name="plus" size={28} strokeWidth={2.4} />
           </button>
           <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")} aria-label={t("top")}>

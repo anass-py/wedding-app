@@ -87,7 +87,7 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         </label>
         <div className="field">
           <span>
-            {t("socialsTitle")} <span className="muted">· {t("socialsHint")}</span>
+            {t("socialsTitle")} <span className="muted">— {t("socialsHint")}</span>
           </span>
           <div className="socials">
             {SOCIAL_KEYS.map((k) => (

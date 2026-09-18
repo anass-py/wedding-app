@@ -102,7 +102,6 @@ img { display: block; }
 .nav__btn { position: relative; width: 44px; height: 44px; display: grid; place-items: center; color: var(--muted); transition: color 0.2s, transform 0.15s; }
 .nav__btn:active { transform: scale(0.9); }
 .nav__btn--on { color: var(--gold); }
-.nav__btn--on::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--gold); }
 .fab {
   width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
   background: var(--gold); color: var(--ink); box-shadow: 0 8px 22px rgba(217, 181, 109, 0.4); transition: transform 0.15s;
@@ -619,3 +618,46 @@ img { display: block; }
 .handlefield { position: relative; display: block; animation: rise 0.3s both; }
 .handlefield__at { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--brand); font-weight: 600; }
 .handlefield__input { padding-left: 32px; border-color: color-mix(in srgb, var(--brand) 45%, var(--ring)); }
+
+/* ── Motion & finish pass ──────────────────────────────────── */
+/* Names: cream → gold gradient, in the header and on the join screen */
+.header__title > span:not(.header__amp), .display {
+  background: linear-gradient(180deg, var(--text) 0%, var(--text) 55%, var(--gold) 140%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.header__ornament span, .onboarding__ornament span { animation: twinkle 3.6s ease-in-out infinite; display: inline-block; }
+@keyframes twinkle { 0%, 100% { opacity: 0.55; transform: scale(0.9) rotate(0); } 50% { opacity: 1; transform: scale(1.15) rotate(45deg); } }
+
+/* Join screen: a slow breathing glow behind the names */
+.onboarding { position: relative; overflow: hidden; }
+.onboarding__glow {
+  position: absolute; left: 50%; top: 22%; width: 120vw; height: 60vh; transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(217, 181, 109, 0.16) 0%, rgba(217, 181, 109, 0.05) 35%, transparent 65%);
+  animation: breathe 7s ease-in-out infinite;
+}
+@keyframes breathe { 0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } }
+.onboarding__card { position: relative; }
+
+/* Empty wall: the + invites you */
+.fab--invite::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--gold); animation: invite 2s ease-out infinite; }
+.fab { position: relative; }
+@keyframes invite { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+
+/* Nav: the active dot springs into place */
+.nav__btn::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--gold); transform: scale(0); transition: transform 0.35s cubic-bezier(0.2, 1.6, 0.3, 1); }
+.nav__btn--on::after { transform: scale(1); }
+.nav__btn .icon { transition: transform 0.35s cubic-bezier(0.2, 1.6, 0.3, 1); }
+.nav__btn--on .icon { transform: translateY(-1px) scale(1.08); }
+
+/* Top 5 star badge: a slow glint */
+.card__star { overflow: hidden; }
+.card__star::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%); transform: translateX(-120%); animation: glint 4s ease-in-out infinite; }
+@keyframes glint { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+/* Buttons press like buttons */
+.btn--primary { box-shadow: 0 6px 18px rgba(217, 181, 109, 0.22); }
+.btn--primary:not(:disabled):active { box-shadow: 0 2px 8px rgba(217, 181, 109, 0.2); }
+
+/* Welcome moment: the star spins once as it lands */
+.welcome__mark { animation: markin 0.9s cubic-bezier(0.2, 1.4, 0.3, 1) both; }
+@keyframes markin { 0% { opacity: 0; transform: scale(0.2) rotate(-120deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }

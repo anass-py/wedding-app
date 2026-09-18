@@ -57,6 +57,7 @@ export function Onboarding({ api, onJoined }: Props) {
 
   return (
     <div className="onboarding">
+      <div className="onboarding__glow" aria-hidden="true" />
       <button
         className="onboarding__lang"
         onClick={() => setLang(lang === "fr" ? "en" : "fr")}
@@ -94,7 +95,6 @@ export function Onboarding({ api, onJoined }: Props) {
           <button type="button" role="radio" aria-checked={mode === "name"} className={"choose__btn" + (mode === "name" ? " choose__btn--on" : "")} onClick={() => setMode("name")}>
             {t("joinWithName")}
           </button>
-          <span className="choose__or">{t("or")}</span>
           <button type="button" role="radio" aria-checked={mode === "social"} className={"choose__btn" + (mode === "social" ? " choose__btn--on" : "")} onClick={() => setMode("social")}>
             {t("joinWithSocial")}
           </button>
@@ -103,7 +103,6 @@ export function Onboarding({ api, onJoined }: Props) {
         <div className="onboarding__body" key={mode}>
           {mode === "name" ? (
             <label className="field">
-              <span>{t("yourName")}</span>
               <input
                 className="input"
                 value={name}
