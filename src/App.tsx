@@ -19,10 +19,8 @@ import type { Guest, Photo } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
-function formatDate(iso: string): string {
-  const d = new Date(iso + "T12:00:00");
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
+/** "Sara & Yassine" → ["Sara", "Yassine"] so the ampersand can be styled. */
+const coupleNames = WEDDING.couple.split(/\s*&\s*/).map((n) => n.trim()).filter(Boolean);
 
 export default function App() {
   const api = useMemo(createApi, []);
@@ -103,19 +101,23 @@ export default function App() {
     <div className="app">
       {api.isDemo && <div className="banner">{t("demoBanner")}</div>}
       <header className="header">
-        <div className="header__brand">
-          <div className="header__title">{WEDDING.couple}</div>
-          <div className="header__date">{formatDate(WEDDING.date)}</div>
-          <div className="header__sub">
-            <span className="header__live">
-              <span className="live-dot" /> {t("live")}
-            </span>
-            <span className="header__dot" aria-hidden="true" />
-            <span>
-              {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
-              {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
-            </span>
-          </div>
+        <h1 className="header__title">
+          {coupleNames.length === 2 ? (
+            <>
+              <span>{coupleNames[0]}</span>
+              <span className="header__amp">&</span>
+              <span>{coupleNames[1]}</span>
+            </>
+          ) : (
+            WEDDING.couple
+          )}
+        </h1>
+        <div className="ornament header__ornament">
+          <span>✦</span>
+        </div>
+        <div className="header__sub">
+          {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
+          {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
         </div>
         {guest && (
           <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
