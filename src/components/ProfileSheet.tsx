@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }: Props) {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
   const [name, setName] = useState(guest.name);
   const [socials, setSocials] = useState<Socials>({ ...guest.socials });
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
@@ -104,17 +104,6 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
                 />
               </label>
             ))}
-          </div>
-        </div>
-        <div className="field">
-          <span>{t("language")}</span>
-          <div className="segmented">
-            <button className={lang === "fr" ? "on" : ""} onClick={() => setLang("fr")}>
-              Français
-            </button>
-            <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>
-              English
-            </button>
           </div>
         </div>
         <div className="field">
