@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function Onboarding({ api, onJoined }: Props) {
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const [name, setName] = useState("");
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,6 +32,9 @@ export function Onboarding({ api, onJoined }: Props) {
 
   return (
     <div className="onboarding">
+      <button className="onboarding__lang" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
+        {lang === "fr" ? "English" : "Français"}
+      </button>
       <div className="onboarding__card">
         <p className="eyebrow">{t("welcome")}</p>
         <h1 className="display">{WEDDING.couple}</h1>

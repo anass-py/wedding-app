@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/*.png"],
       manifest: {
-        name: "Wedding Photos",
-        short_name: "Wedding",
-        description: "Share your photos of the wedding",
+        name: "Anass & Boutaina",
+        short_name: "A & B",
+        description: "Les photos et vidéos du mariage, en direct",
         start_url: "/",
         display: "standalone",
         orientation: "portrait",

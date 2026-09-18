@@ -41,9 +41,9 @@ async function main() {
   const uidv = auth.session.user.id;
 
   // Tables & columns
-  const { error: guestsErr } = await sb.from("guests").select("id").limit(1);
-  if (guestsErr) bad(`table guests: ${guestsErr.message}`, "SQL Editor → paste supabase/schema.sql → Run");
-  else ok("table guests");
+  const { error: guestsErr } = await sb.from("guests").select("id, socials").limit(1);
+  if (guestsErr) bad(`table guests: ${guestsErr.message}`, "SQL Editor → paste supabase/schema.sql → Run (v2.1 added the socials column)");
+  else ok("table guests (with socials)");
   const { error: photosErr } = await sb.from("photos").select("id, kind, duration").limit(1);
   if (photosErr) bad(`table photos: ${photosErr.message}`, "re-run supabase/schema.sql (it adds the v1.2 video columns safely)");
   else ok("table photos (with video columns)");

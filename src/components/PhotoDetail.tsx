@@ -16,6 +16,7 @@ interface Props {
   onNavigate: (id: string) => void;
   onHeart: (photo: Photo) => void;
   onDelete: (photo: Photo) => Promise<void>;
+  onOpenGuest: (guest: Photo["guest"]) => void;
 }
 
 const SWIPE_PX = 70;
@@ -33,7 +34,7 @@ interface Pt {
  * overlaid. Swipe ←/→ between items, swipe ↓ to close, tap = play/pause (video) or
  * hide/show the overlay (photo), double-tap = ❤️, pinch = zoom (photo).
  */
-export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete }: Props) {
+export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete, onOpenGuest }: Props) {
   const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [likeAnim, setLikeAnim] = useState<{ photoId: string; n: number } | null>(null);
@@ -374,15 +375,17 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
 
       <div className="viewer__bar">
         <div className="viewer__author">
-          <Avatar guest={photo.guest} urlFor={api.urlFor} size={40} />
-          <div className="viewer__meta">
-            <div className="viewer__name">{photo.guest.name}</div>
-            <div className="viewer__time">
-              {relativeTime(photo.created_at, t)}
-              {isVideo && ` · ${formatDuration(photo.duration)}`}
-              {photo.score && ` · ★ ${photo.score.score.toFixed(1)}`}
-            </div>
-          </div>
+          <button className="viewer__who" onClick={() => onOpenGuest(photo.guest)} aria-label={photo.guest.name}>
+            <Avatar guest={photo.guest} urlFor={api.urlFor} size={40} />
+            <span className="viewer__meta">
+              <span className="viewer__name">{photo.guest.name}</span>
+              <span className="viewer__time">
+                {relativeTime(photo.created_at, t)}
+                {isVideo && ` · ${formatDuration(photo.duration)}`}
+                {photo.score && ` · ★ ${photo.score.score.toFixed(1)}`}
+              </span>
+            </span>
+          </button>
           <div className="viewer__tools">
             {isVideo && (
               <button className="tool" onClick={toggleMute} aria-label={muted ? t("unmute") : t("mute")}>

@@ -40,7 +40,13 @@ function makeImage(seed: number, w: number, h: number): string {
 }
 
 export function createDemoApi(): Api {
-  const guests: Guest[] = NAMES.map((name, i) => ({ id: `g${i}`, name, avatar_path: null }));
+  const guests: Guest[] = NAMES.map((name, i) => ({
+    id: `g${i}`,
+    name,
+    avatar_path: null,
+    socials: i % 3 === 0 ? { instagram: name.toLowerCase(), website: "example.com" } : {},
+    created_at: new Date(Date.now() - (NAMES.length - i) * 3_600_000).toISOString(),
+  }));
   let me: Guest | null = null;
   const urls = new Map<string, string>();
   let photos: Photo[] = [];
@@ -89,14 +95,15 @@ export function createDemoApi(): Api {
     async init() {
       try {
         const saved = localStorage.getItem("wedding.demo.guest");
-        me = saved ? (JSON.parse(saved) as Guest) : null;
+        const g = saved ? (JSON.parse(saved) as Partial<Guest>) : null;
+        me = g ? ({ ...g, socials: g.socials ?? {} } as Guest) : null;
       } catch {
         me = null;
       }
       return me;
     },
     async createGuest(name, avatar) {
-      me = { id: "me", name: name.trim(), avatar_path: null };
+      me = { id: "me", name: name.trim(), avatar_path: null, socials: {}, created_at: new Date().toISOString() };
       if (avatar) {
         const url = URL.createObjectURL(avatar);
         urls.set("me-avatar.jpg", url);
@@ -109,9 +116,12 @@ export function createDemoApi(): Api {
       }
       return me;
     },
-    async updateGuest(name, avatar) {
+    async listGuests() {
+      return [...guests, ...(me ? [me] : [])];
+    },
+    async updateGuest(name, avatar, socials) {
       if (!me) throw new Error("Not registered");
-      me = { ...me, name: name.trim() };
+      me = { ...me, name: name.trim(), socials: socials ?? me.socials };
       if (avatar) {
         urls.set("me-avatar.jpg", URL.createObjectURL(avatar));
         me.avatar_path = "me-avatar.jpg";

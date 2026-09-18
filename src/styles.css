@@ -301,8 +301,13 @@ img { display: block; }
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.72)); display: grid; gap: 8px;
 }
 .viewer__author { display: flex; align-items: center; gap: 10px; }
+.viewer__who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; text-align: left; color: inherit; }
+.viewer__who:active { opacity: 0.8; }
+.viewer__who .viewer__meta { display: block; }
+.viewer__who .viewer__name, .viewer__who .viewer__time { display: block; }
 .viewer__author .avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); flex-shrink: 0; }
 .viewer__meta { flex: 1; min-width: 0; }
+.viewer__author .viewer__tools { margin-left: auto; }
 .viewer__name { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .viewer__time { font-size: 12px; color: rgba(255, 255, 255, 0.75); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
 .viewer__tools { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -421,6 +426,7 @@ img { display: block; }
 .onboarding__card > :nth-child(7) { animation-delay: 0.47s; }
 .onboarding__card > :nth-child(8) { animation-delay: 0.54s; }
 .onboarding__ornament { width: 140px; margin: -4px auto; }
+.onboarding__lang { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 18px; font-size: 13px; color: var(--muted); padding: 6px 10px; border: 1px solid var(--ring); border-radius: 999px; }
 .onboarding__intro { color: var(--muted); margin: 0 0 8px; }
 .selfie { display: grid; justify-items: center; gap: 8px; }
 .selfie img, .selfie__icon {
@@ -544,3 +550,45 @@ img { display: block; }
 .shutter__core { position: absolute; inset: 10px; border-radius: 50%; background: #fff; transition: transform 0.15s, background 0.15s, border-radius 0.15s; }
 .shutter:active .shutter__core { transform: scale(0.92); }
 .shutter--rec .shutter__core { background: #ff3b30; transform: scale(0.55); border-radius: 22%; }
+
+/* ── Guest card ────────────────────────────────────────────── */
+.gcard-backdrop { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 20px; background: rgba(6, 5, 4, 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: fade 0.2s; }
+.gcard {
+  position: relative; width: min(100%, 380px); padding: 26px 24px 24px; border-radius: 28px; color: #f4ede3;
+  background: radial-gradient(120% 90% at 50% 0%, #2a2219 0%, #15120f 55%, #0f0d0b 100%);
+  border: 1px solid rgba(217, 181, 109, 0.55);
+  box-shadow: 0 0 0 1px rgba(217, 181, 109, 0.12) inset, 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 60px rgba(217, 181, 109, 0.12);
+  animation: cardin 0.45s cubic-bezier(0.2, 1.2, 0.3, 1) both;
+}
+@keyframes cardin { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
+.gcard__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+.gcard__brand { font-family: var(--serif); font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+.gcard__edition { font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(244, 237, 227, 0.55); }
+.gcard__numrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gcard__numrow .avatar { box-shadow: 0 0 0 2px rgba(217, 181, 109, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5); }
+.gcard__num { font-family: var(--serif); font-weight: 600; font-size: 76px; line-height: 0.9; color: var(--gold); text-shadow: 0 0 30px rgba(217, 181, 109, 0.35); letter-spacing: -0.02em; }
+.gcard__of { font-size: 30px; color: rgba(244, 237, 227, 0.35); font-weight: 500; letter-spacing: 0; }
+.gcard__name { margin: 22px 0 4px; font-family: var(--serif); font-weight: 600; font-size: 36px; line-height: 1; text-transform: uppercase; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.gcard__handle { font-size: 13px; letter-spacing: 0.08em; color: rgba(244, 237, 227, 0.5); font-variant-numeric: tabular-nums; }
+.gcard__socials { display: flex; gap: 10px; margin-top: 18px; }
+.gcard__social { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; color: #f4ede3; border: 1px solid rgba(244, 237, 227, 0.18); background: rgba(255, 255, 255, 0.03); transition: transform 0.15s, border-color 0.15s; }
+.gcard__social:active { transform: scale(0.92); border-color: var(--gold); }
+.gcard__rule { border: 0; height: 1px; margin: 22px 0; background: linear-gradient(90deg, transparent, rgba(217, 181, 109, 0.45), transparent); }
+.gcard__bigrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gcard__big { display: grid; gap: 2px; }
+.gcard__bignum { font-family: var(--serif); font-weight: 600; font-size: 60px; line-height: 0.95; color: var(--gold); text-shadow: 0 0 26px rgba(217, 181, 109, 0.3); }
+.gcard__biglabel { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(244, 237, 227, 0.55); }
+.gcard__biglabel .icon { color: #ff5a60; }
+.gcard__chip { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(244, 237, 227, 0.25); color: rgba(244, 237, 227, 0.75); white-space: nowrap; }
+.gcard__chip--gold { border-color: var(--gold); color: var(--gold); }
+.gcard__stats { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.gcard__stats > div { display: grid; gap: 8px; padding: 0 12px; border-left: 1px solid rgba(244, 237, 227, 0.12); }
+.gcard__stats > div:first-child { padding-left: 0; border-left: 0; }
+.gcard__k { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(244, 237, 227, 0.5); }
+.gcard__v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gcard__v--gold { color: var(--gold); }
+.gcard__close { position: absolute; top: -52px; right: 0; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #f4ede3; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.socials { display: grid; gap: 8px; }
+.socials__row { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.socials__row .icon { flex-shrink: 0; color: var(--gold); }
+.input--slim { padding: 10px 12px; }

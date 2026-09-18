@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
 import type { Api, Guest, Photo } from "../lib/types";
+import { SOCIAL_KEYS, normalizeSocial, type SocialKey } from "../lib/socials";
+import type { Socials } from "../lib/types";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 import { AvatarPicker } from "./AvatarPicker";
 
 interface Props {
@@ -15,8 +18,9 @@ interface Props {
 }
 
 export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }: Props) {
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const [name, setName] = useState(guest.name);
+  const [socials, setSocials] = useState<Socials>({ ...guest.socials });
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [theme, setThemeState] = useState<ThemeName>(getTheme);
@@ -30,13 +34,19 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
     return { photos: mine.length, hearts: mine.reduce((n, p) => n + p.hearts, 0) };
   }, [photos, guest.id]);
 
-  const dirty = name.trim() !== guest.name || !!selfie;
+  const socialsDirty = SOCIAL_KEYS.some((k) => (socials[k] ?? "") !== (guest.socials?.[k] ?? ""));
+  const dirty = name.trim() !== guest.name || !!selfie || socialsDirty;
 
   const save = async () => {
     if (!dirty || !name.trim() || busy) return;
     setBusy(true);
     try {
-      onUpdated(await api.updateGuest(name, selfie?.blob));
+      const clean: Socials = {};
+      for (const k of SOCIAL_KEYS) {
+        const v = normalizeSocial(k, socials[k] ?? "");
+        if (v) clean[k] = v;
+      }
+      onUpdated(await api.updateGuest(name, selfie?.blob, clean));
       onToast(t("saved"));
       onClose();
     } catch (e) {
@@ -74,6 +84,45 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
           <span>{t("yourName")}</span>
           <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
         </label>
+        <div className="field">
+          <span>
+            {t("socialsTitle")} <span className="muted">· {t("socialsHint")}</span>
+          </span>
+          <div className="socials">
+            {(
+              [
+                ["instagram", "instagram", "Instagram"],
+                ["x", "x", "X"],
+                ["tiktok", "tiktok", "TikTok"],
+                ["website", "globe", t("website")],
+              ] as [SocialKey, "instagram" | "x" | "tiktok" | "globe", string][]
+            ).map(([k, icon, label]) => (
+              <label key={k} className="socials__row">
+                <Icon name={icon} size={18} />
+                <input
+                  className="input input--slim"
+                  placeholder={k === "website" ? "monsite.com" : `@${label.toLowerCase()}`}
+                  value={socials[k] ?? ""}
+                  maxLength={80}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  onChange={(e) => setSocials((prev) => ({ ...prev, [k]: e.target.value }))}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <span>{t("language")}</span>
+          <div className="segmented">
+            <button className={lang === "fr" ? "on" : ""} onClick={() => setLang("fr")}>
+              Français
+            </button>
+            <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>
+              English
+            </button>
+          </div>
+        </div>
         <div className="field">
           <span>{t("look")}</span>
           <div className="segmented">

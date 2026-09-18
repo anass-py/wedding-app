@@ -2,14 +2,14 @@ import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
 import { processImage } from "./image";
 import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
-import type { Api, Guest, Photo, RealtimeHandlers, Score } from "./types";
+import type { Api, Guest, Photo, RealtimeHandlers, Score, Socials } from "./types";
 
 const BUCKET = "photos";
 
 const PHOTO_SELECT =
   "id, guest_id, kind, duration, path, thumb_path, width, height, caption, created_at, " +
   // guests!photos_guest_id_fkey: hearts also links photos↔guests, so the embed must name the FK.
-  "guest:guests!photos_guest_id_fkey(id, name, avatar_path), hearts(guest_id), photo_scores(score, theme, tags, reason)";
+  "guest:guests!photos_guest_id_fkey(id, name, avatar_path, socials), hearts(guest_id), photo_scores(score, theme, tags, reason)";
 
 interface PhotoRow {
   id: string;
@@ -22,10 +22,22 @@ interface PhotoRow {
   height: number | null;
   caption: string | null;
   created_at: string;
-  guest: Guest | Guest[] | null;
+  guest: GuestRow | GuestRow[] | null;
   hearts: { guest_id: string }[] | null;
   photo_scores: ScoreRow | ScoreRow[] | null;
 }
+interface GuestRow {
+  id: string;
+  name: string;
+  avatar_path: string | null;
+  socials?: Socials | null;
+  created_at?: string;
+}
+const GUEST_SELECT = "id, name, avatar_path, socials";
+function toGuest(g: GuestRow): Guest {
+  return { id: g.id, name: g.name, avatar_path: g.avatar_path, socials: g.socials ?? {}, created_at: g.created_at };
+}
+
 interface ScoreRow {
   score: number | string;
   theme: string;
@@ -59,7 +71,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       height: r.height,
       caption: r.caption,
       created_at: r.created_at,
-      guest: one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null },
+      guest: toGuest(one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null }),
       hearts: hearts.length,
       hearted: !!guest && hearts.some((h) => h.guest_id === guest!.id),
       score: toScore(one(r.photo_scores)),
@@ -123,13 +135,9 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async init() {
       const session = await ensureSession();
       authId = session.user.id;
-      const { data, error } = await sb
-        .from("guests")
-        .select("id, name, avatar_path")
-        .eq("auth_id", authId)
-        .maybeSingle();
+      const { data, error } = await sb.from("guests").select(GUEST_SELECT).eq("auth_id", authId).maybeSingle();
       if (error) throw error;
-      guest = data ?? null;
+      guest = data ? toGuest(data as GuestRow) : null;
       return guest;
     },
 
@@ -143,24 +151,31 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { data, error } = await sb
         .from("guests")
         .insert({ auth_id: authId, name: name.trim(), avatar_path })
-        .select("id, name, avatar_path")
+        .select(GUEST_SELECT)
         .single();
       if (error) throw error;
-      guest = data;
-      return data;
+      guest = toGuest(data as GuestRow);
+      return guest;
     },
 
-    async updateGuest(name, avatar) {
+    async updateGuest(name, avatar, socials) {
       if (!guest || !authId) throw new Error("Not registered");
-      const patch: { name: string; avatar_path?: string } = { name: name.trim() };
+      const patch: { name: string; avatar_path?: string; socials?: Socials } = { name: name.trim() };
       if (avatar) {
         patch.avatar_path = `${authId}/avatar-${Date.now()}.jpg`;
         await upload(patch.avatar_path, avatar);
       }
-      const { data, error } = await sb.from("guests").update(patch).eq("id", guest.id).select("id, name, avatar_path").single();
+      if (socials) patch.socials = socials;
+      const { data, error } = await sb.from("guests").update(patch).eq("id", guest.id).select(GUEST_SELECT).single();
       if (error) throw error;
-      guest = data;
-      return data;
+      guest = toGuest(data as GuestRow);
+      return guest;
+    },
+
+    async listGuests() {
+      const { data, error } = await sb.from("guests").select(`${GUEST_SELECT}, created_at`).order("created_at");
+      if (error) throw error;
+      return (data as GuestRow[]).map(toGuest);
     },
 
     async listPhotos() {

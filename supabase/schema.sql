@@ -27,6 +27,9 @@ create table if not exists public.photos (
 );
 create index if not exists photos_created_at_idx on public.photos (created_at desc);
 
+-- v2.1: optional social links shown on the guest card ({ "instagram": "…", "x": "…", "tiktok": "…", "website": "…" })
+alter table public.guests add column if not exists socials jsonb not null default '{}'::jsonb;
+
 -- v1.2: videos. (alter … if not exists so re-running on an older database upgrades it)
 alter table public.photos add column if not exists kind text not null default 'photo' check (kind in ('photo', 'video'));
 alter table public.photos add column if not exists duration real;

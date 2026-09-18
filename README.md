@@ -29,7 +29,8 @@ plain `http://192.168…`. For phone testing on the LAN run `npm run dev:https` 
 the self-signed certificate warning once; on plain http the app falls back to the phone's own
 camera app. Deployed on Vercel it's HTTPS already.
 
-Edit [src/config.ts](src/config.ts) for your names, date, hashtag and the look: `theme: "midnight"`
+Edit [src/config.ts](src/config.ts) for your names, date, hashtag, what a guest is called on their
+card (`guestTitle`, e.g. Complice / Témoin / Paparazzi) and the look: `theme: "midnight"`
 (dark, evening) or `theme: "ivory"` (cream invitation-card look, daytime).
 See [VERSIONS.md](VERSIONS.md) for the history of every version and how to compare them.
 

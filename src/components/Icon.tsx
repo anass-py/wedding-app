@@ -74,6 +74,21 @@ const paths: Record<string, ReactNode> = {
   ),
   fit: <path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15M9.5 9.5h5v5h-5z" />,
   fill: <path d="M4.5 9V4.5H9M15 4.5h4.5V9M4.5 15v4.5H9M19.5 15v4.5H15M8 8l3 3M16 8l-3 3M8 16l3-3M16 16l-3-3" />,
+  instagram: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="3.8" />
+      <circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  x: <path d="M4.5 4.5l15 15M19.5 4.5l-15 15" />,
+  tiktok: <path d="M13.5 3.5v11.2a3.3 3.3 0 1 1-3.3-3.3M13.5 3.5c.4 2.6 2.1 4.3 4.7 4.6" />,
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.6 2.4 3.9 5.2 3.9 8.5s-1.3 6.1-3.9 8.5c-2.6-2.4-3.9-5.2-3.9-8.5s1.3-6.1 3.9-8.5z" />
+    </>
+  ),
   user: (
     <>
       <circle cx="12" cy="8.5" r="3.8" />

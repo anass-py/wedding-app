@@ -1,7 +1,16 @@
+export interface Socials {
+  instagram?: string;
+  x?: string;
+  tiktok?: string;
+  website?: string;
+}
+
 export interface Guest {
   id: string;
   name: string;
   avatar_path: string | null;
+  socials: Socials;
+  created_at?: string;
 }
 
 export interface Score {
@@ -46,7 +55,9 @@ export interface Api {
   /** Ensure an auth session; return the guest profile if one exists on this device. */
   init(): Promise<Guest | null>;
   createGuest(name: string, avatar?: Blob): Promise<Guest>;
-  updateGuest(name: string, avatar?: Blob): Promise<Guest>;
+  updateGuest(name: string, avatar?: Blob, socials?: Socials): Promise<Guest>;
+  /** Everyone who joined, oldest first (for the guest number on the card). */
+  listGuests(): Promise<Guest[]>;
   listPhotos(): Promise<Photo[]>;
   subscribe(handlers: RealtimeHandlers): () => void;
   /** Upload a photo or a video. onProgress gets 0..1 for the transfer. */

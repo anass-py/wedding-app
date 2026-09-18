@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
+import { GuestCard } from "./components/GuestCard";
 import { Icon } from "./components/Icon";
 import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
@@ -30,6 +31,7 @@ export default function App() {
   const [guest, setGuest] = useState<Guest | null>(null);
   const [welcome, setWelcome] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [guestCard, setGuestCard] = useState<Guest | null>(null);
   const [tab, setTab] = useState<Tab>("wall");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -181,8 +183,10 @@ export default function App() {
           onNavigate={setSelectedId}
           onHeart={toggleHeart}
           onDelete={removePhoto}
+          onOpenGuest={setGuestCard}
         />
       )}
+      {guestCard && <GuestCard guest={guestCard} photos={photos} api={api} onClose={() => setGuestCard(null)} />}
       {uploadOpen && (
         <UploadSheet
           api={api}
