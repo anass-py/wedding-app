@@ -1,21 +1,22 @@
-# Wedding-day worker in the cloud: converts new videos and scores new photos every
-# ~10 minutes so nobody needs a laptop running.
+# Wedding-day worker in the cloud: converts new videos to a universal MP4 (and, if an
+# Anthropic key is set, scores new photos for the Top 5) every ~10 minutes — no laptop needed.
 #
-# It stays OFF until you switch it on:
-#   1. Settings → Secrets and variables → Actions → Secrets: add
-#        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
-#   2. Same page → Variables: add RANK_ENABLED = true   (set to false after the wedding)
+# Switch it on:
+#   1. Settings → Secrets and variables → Actions → Secrets:
+#        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY   (required)
+#        ANTHROPIC_API_KEY                          (optional — enables the AI Top 5)
+#   2. Same page → Variables: RANK_ENABLED = true   (set to false after the wedding)
 # "Run workflow" (Actions tab) always runs once, regardless of RANK_ENABLED.
-name: Rank photos
+name: Wedding worker
 on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 jobs:
-  rank:
+  worker:
     if: github.event_name == 'workflow_dispatch' || vars.RANK_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -24,18 +25,22 @@ jobs:
       - name: Check secrets
         run: |
           missing=""
-          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY ANTHROPIC_API_KEY; do
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
             [ -z "${!v}" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then
             echo "::error::Missing repository secrets:$missing — add them under Settings → Secrets and variables → Actions, then re-run."
             exit 1
           fi
+          [ -z "$ANTHROPIC_API_KEY" ] && echo "::notice::ANTHROPIC_API_KEY not set — videos will be converted, photos won't be AI-scored." || true
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run transcode
-      - run: npm run rank
+      - name: Convert new videos
+        run: npm run transcode
+      - name: Score new photos (AI)
+        if: env.ANTHROPIC_API_KEY != ''
+        run: npm run rank
