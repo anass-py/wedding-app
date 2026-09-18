@@ -13,7 +13,7 @@ export interface Processed {
   height: number;
 }
 
-const FULL_MAX_SIDE = 1920;
+const FULL_MAX_SIDE = 2560; // sharp on a 4K TV and when pinch-zooming; ~0.8–1.2 MB per photo
 const THUMB_MAX_SIDE = 720;
 const AVATAR_SIDE = 320;
 
@@ -27,7 +27,7 @@ export async function processImage(file: File): Promise<Processed> {
     const scale = Math.min(1, FULL_MAX_SIDE / Math.max(w, h));
     const fw = Math.round(w * scale);
     const fh = Math.round(h * scale);
-    const full = await toBlob(draw(img, 0, 0, w, h, fw, fh), 0.86);
+    const full = await toBlob(draw(img, 0, 0, w, h, fw, fh), 0.9);
 
     // Thumbnail keeps the real proportions (masonry grid); bubbles crop it with object-fit.
     const ts = Math.min(1, THUMB_MAX_SIDE / Math.max(w, h));

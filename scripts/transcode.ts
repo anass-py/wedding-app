@@ -1,7 +1,7 @@
 /**
  * Makes guest videos play everywhere. Phones upload whatever they have (an iPhone
  * .mov is HEVC, which Android Chrome can't play); this converts each new video to
- * H.264 MP4 (max 1280px, faststart) and points the row at the converted file.
+ * H.264 MP4 (max 1920px, CRF 21, faststart) and points the row at the converted file.
  *
  *   npm run transcode            # convert new videos once
  *   npm run transcode -- --watch # keep going every 60 s
@@ -77,8 +77,8 @@ async function transcodeOne(row: VideoRow, ffmpeg: string): Promise<void> {
     await run(ffmpeg, [
       "-y", "-hide_banner", "-loglevel", "error",
       "-i", input,
-      "-vf", "scale='min(1280,iw)':-2",
-      "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-profile:v", "main", "-pix_fmt", "yuv420p",
+      "-vf", "scale='min(1920,iw)':-2",
+      "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-profile:v", "high", "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "128k", "-ac", "2",
       "-movflags", "+faststart",
       output,
