@@ -78,13 +78,26 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     };
   }
 
-  async function ensureSession() {
-    const { data } = await sb.auth.getSession();
-    if (data.session) return data.session;
+  async function freshAnonymousSession() {
     const { data: anon, error } = await sb.auth.signInAnonymously();
     if (error) throw error;
     if (!anon.session) throw new Error("Anonymous sign-in returned no session");
     return anon.session;
+  }
+
+  /**
+   * Reuse the stored session, but confirm the user still exists server-side: after a
+   * data reset the phone may hold a session for a deleted user, which would make every
+   * insert fail with a foreign-key error. In that case start over with a new one.
+   */
+  async function ensureSession() {
+    const { data } = await sb.auth.getSession();
+    if (data.session) {
+      const { error } = await sb.auth.getUser();
+      if (!error) return data.session;
+      await sb.auth.signOut({ scope: "local" }).catch(() => undefined);
+    }
+    return freshAnonymousSession();
   }
 
   /**
@@ -148,11 +161,21 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         avatar_path = `${authId}/avatar-${Date.now()}.jpg`;
         await upload(avatar_path, avatar);
       }
-      const { data, error } = await sb
+      let { data, error } = await sb
         .from("guests")
         .insert({ auth_id: authId, name: name.trim(), avatar_path })
         .select(GUEST_SELECT)
         .single();
+      if (error?.code === "23503") {
+        // Session belonged to a deleted user: get a new identity and try once more.
+        await sb.auth.signOut({ scope: "local" }).catch(() => undefined);
+        authId = (await freshAnonymousSession()).user.id;
+        ({ data, error } = await sb
+          .from("guests")
+          .insert({ auth_id: authId, name: name.trim(), avatar_path: null })
+          .select(GUEST_SELECT)
+          .single());
+      }
       if (error) throw error;
       guest = toGuest(data as GuestRow);
       return guest;
