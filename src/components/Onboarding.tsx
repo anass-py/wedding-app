@@ -69,7 +69,6 @@ export function Onboarding({ api, onJoined }: Props) {
         <div className="ornament onboarding__ornament">
           <span>✦</span>
         </div>
-        {WEDDING.hashtag && <p className="muted">{WEDDING.hashtag}</p>}
         <p className="onboarding__intro">{t("onboardingIntro")}</p>
 
         <AvatarPicker
@@ -91,19 +90,12 @@ export function Onboarding({ api, onJoined }: Props) {
             </span>
           )}
         </AvatarPicker>
-        <div className="segmented onboarding__mode">
-          <button
-            type="button"
-            className={mode === "name" ? "on" : ""}
-            onClick={() => setMode("name")}
-          >
+        <div className="choose" role="radiogroup">
+          <button type="button" role="radio" aria-checked={mode === "name"} className={"choose__btn" + (mode === "name" ? " choose__btn--on" : "")} onClick={() => setMode("name")}>
             {t("joinWithName")}
           </button>
-          <button
-            type="button"
-            className={mode === "social" ? "on" : ""}
-            onClick={() => setMode("social")}
-          >
+          <span className="choose__or">{t("or")}</span>
+          <button type="button" role="radio" aria-checked={mode === "social"} className={"choose__btn" + (mode === "social" ? " choose__btn--on" : "")} onClick={() => setMode("social")}>
             {t("joinWithSocial")}
           </button>
         </div>

@@ -597,7 +597,11 @@ img { display: block; }
 .input--slim { padding: 10px 12px; }
 
 /* ── Join with a network ───────────────────────────────────── */
-.onboarding__mode { width: 100%; }
+.choose { display: flex; align-items: center; gap: 12px; width: 100%; }
+.choose__btn { flex: 1; padding: 14px 10px; border-radius: 14px; border: 1px solid var(--ring); color: var(--muted); font-size: 15px; font-weight: 500; transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s; }
+.choose__btn:active { transform: scale(0.97); }
+.choose__btn--on { border-color: var(--gold); color: var(--gold); background: rgba(217, 181, 109, 0.1); }
+.choose__or { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--muted); }
 .onboarding__card > .onboarding__body { animation: rise 0.3s both; animation-delay: 0s; display: grid; gap: 14px; }
 .onboarding__note { margin: 4px 0 0; }
 .socialpick { display: flex; justify-content: center; gap: 14px; padding: 6px 0 2px; }
