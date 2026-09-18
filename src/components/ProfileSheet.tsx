@@ -121,10 +121,10 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
           <span>{t("look")}</span>
           <div className="segmented">
             <button className={theme === "midnight" ? "on" : ""} onClick={() => pickTheme("midnight")}>
-              ● {t("midnight")}
+              ☾ {t("midnight")}
             </button>
             <button className={theme === "ivory" ? "on" : ""} onClick={() => pickTheme("ivory")}>
-              ○ {t("ivory")}
+              ☀ {t("ivory")}
             </button>
           </div>
         </div>
