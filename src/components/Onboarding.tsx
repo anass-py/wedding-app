@@ -141,8 +141,7 @@ export function Onboarding({ api, onJoined }: Props) {
                   />
                 </label>
               )}
-              <p className="muted small onboarding__note">{t("socialNote")}</p>
-            </div>
+              </div>
           )}
         </div>
 
