@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
+import { describeError } from "../lib/errors";
 import type { Api, Guest } from "../lib/types";
 import { AvatarPicker } from "./AvatarPicker";
 import { Icon } from "./Icon";
@@ -25,7 +26,7 @@ export function Onboarding({ api, onJoined }: Props) {
     try {
       onJoined(await api.createGuest(trimmed, selfie?.blob));
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(describeError(e));
       setBusy(false);
     }
   };

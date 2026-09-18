@@ -389,6 +389,9 @@ img { display: block; }
 /* ── Splash / skeleton ─────────────────────────────────────── */
 .splash { height: 100%; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; animation: fade 0.4s; }
 .splash__mark { color: var(--gold); font-size: 22px; animation: pulse 1.6s infinite; }
+.fatal { display: grid; justify-items: center; gap: 16px; max-width: 360px; }
+.fatal__mark { color: var(--gold); font-size: 22px; }
+.fatal__text { margin: 0; white-space: pre-line; color: var(--muted); font-size: 14px; line-height: 1.45; }
 .masonry--skeleton { pointer-events: none; }
 .skel { border-radius: 14px; background: linear-gradient(100deg, var(--bg2) 30%, var(--bg3) 50%, var(--bg2) 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite linear; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }

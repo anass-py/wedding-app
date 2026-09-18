@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MEDIA } from "../config";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
+import { describeError } from "../lib/errors";
 import { ImageError } from "../lib/image";
 import type { Api, Photo } from "../lib/types";
 import { VideoError, isVideoFile } from "../lib/video";
@@ -20,13 +21,6 @@ interface Picked {
   file: File;
   url: string;
   video: boolean;
-}
-
-/** Supabase throws plain objects ({ message, statusCode… }), not Error instances. */
-function describe(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
 }
 
 export function UploadSheet({ api, onClose, onError, onDone }: Props) {
@@ -70,7 +64,7 @@ export function UploadSheet({ api, onClose, onError, onDone }: Props) {
       if (e.code === "too-long") return t("videoTooLong", { s: MEDIA.MAX_VIDEO_SECONDS });
       return t("unsupportedVideo");
     }
-    return `${t("uploadFailed")} (${describe(e)})`;
+    return `${t("uploadFailed")} (${describeError(e)})`;
   };
 
   const post = async () => {

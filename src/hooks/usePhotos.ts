@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { describeError } from "../lib/errors";
 import type { Api, Photo } from "../lib/types";
 
 export function usePhotos(api: Api, ready: boolean, onRemoteHeart?: (photoId: string) => void) {
@@ -24,7 +25,7 @@ export function usePhotos(api: Api, ready: boolean, onRemoteHeart?: (photoId: st
           }
         })
         .catch((e: unknown) => {
-          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+          if (!cancelled) setError(describeError(e));
         })
         .finally(() => {
           if (!cancelled) setLoading(false);

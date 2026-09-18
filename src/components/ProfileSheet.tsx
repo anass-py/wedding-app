@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { describeError } from "../lib/errors";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
 import type { Api, Guest, Photo } from "../lib/types";
@@ -50,7 +51,7 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
       onToast(t("saved"));
       onClose();
     } catch (e) {
-      onToast(e instanceof Error ? e.message : String(e));
+      onToast(describeError(e));
     } finally {
       setBusy(false);
     }

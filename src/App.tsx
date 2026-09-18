@@ -15,6 +15,7 @@ import { Welcome } from "./components/Welcome";
 import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
+import { describeError, isSchemaOutOfDate } from "./lib/errors";
 import { topPhotos } from "./lib/ranking";
 import type { Guest, Photo } from "./lib/types";
 
@@ -51,7 +52,7 @@ export default function App() {
         setStage(g ? "ready" : "onboarding");
       })
       .catch((e: unknown) => {
-        setFatal(e instanceof Error ? e.message : String(e));
+        setFatal(isSchemaOutOfDate(e) ? `${t("schemaOutOfDate")}\n\n${describeError(e)}` : describeError(e));
         setStage("error");
       });
   }, [api]);
@@ -85,7 +86,19 @@ export default function App() {
       </div>
     );
   }
-  if (stage === "error") return <div className="center error">{fatal}</div>;
+  if (stage === "error") {
+    return (
+      <div className="center">
+        <div className="fatal">
+          <div className="fatal__mark">✦</div>
+          <p className="fatal__text">{fatal}</p>
+          <button className="btn btn--ghost" onClick={() => location.reload()}>
+            {t("retry")}
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (stage === "onboarding") {
     return (
       <Onboarding
