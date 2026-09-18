@@ -1,7 +1,8 @@
 import type { Socials } from "./types";
 
 export type SocialKey = keyof Socials;
-export const SOCIAL_KEYS: SocialKey[] = ["instagram", "snapchat", "tiktok", "facebook", "x", "website"];
+/** Networks offered in the profile and shown on cards (x / website stay in the data model but are no longer offered). */
+export const SOCIAL_KEYS: SocialKey[] = ["instagram", "snapchat", "tiktok", "facebook"];
 /** The networks offered on the join screen. */
 export const JOIN_NETWORKS: SocialKey[] = ["instagram", "snapchat", "tiktok", "facebook"];
 
