@@ -6,19 +6,29 @@ interface Props {
   size?: number;
 }
 
-const HUES = [18, 42, 96, 160, 205, 260, 300, 340];
-
-export function Avatar({ guest, urlFor, size = 36 }: Props) {
-  const style = { width: size, height: size, fontSize: size * 0.42 };
-  if (guest.avatar_path) {
-    return <img className="avatar" style={style} src={urlFor(guest.avatar_path)} alt="" draggable={false} />;
-  }
+/** Stable hue per guest so their orb looks the same on every phone. */
+function hueOf(id: string): number {
   let h = 0;
-  for (const ch of guest.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const hue = HUES[h % HUES.length];
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % 360;
+}
+
+/** Selfie if they added one; otherwise a small gold-ringed gradient orb unique to them. */
+export function Avatar({ guest, urlFor, size = 36 }: Props) {
+  if (guest.avatar_path) {
+    return <img className="avatar" style={{ width: size, height: size }} src={urlFor(guest.avatar_path)} alt="" draggable={false} />;
+  }
+  const h = hueOf(guest.id);
+  const h2 = (h + 40) % 360;
   return (
-    <div className="avatar avatar--initial" style={{ ...style, background: `hsl(${hue} 40% 38%)` }}>
-      {guest.name.trim().charAt(0).toUpperCase() || "?"}
-    </div>
+    <span
+      className="avatar avatar--orb"
+      style={{
+        width: size,
+        height: size,
+        background: `radial-gradient(circle at 32% 28%, hsl(${h} 70% 74%) 0%, hsl(${h} 58% 52%) 38%, hsl(${h2} 55% 26%) 100%)`,
+      }}
+      aria-hidden="true"
+    />
   );
 }

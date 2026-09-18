@@ -26,7 +26,7 @@ const coupleNames = WEDDING.couple.split(/\s*&\s*/).map((n) => n.trim()).filter(
 
 export default function App() {
   const api = useMemo(createApi, []);
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const [stage, setStage] = useState<Stage>("loading");
   const [fatal, setFatal] = useState<string | null>(null);
   const [guest, setGuest] = useState<Guest | null>(null);
@@ -134,11 +134,18 @@ export default function App() {
           {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
           {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
         </div>
-        {guest && (
-          <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
-            <Avatar guest={guest} urlFor={api.urlFor} size={36} />
-          </button>
-        )}
+        <button className="langtoggle header__lang" onClick={() => setLang(lang === "fr" ? "en" : "fr")} aria-label={t("language")}>
+          <span className={lang === "fr" ? "on" : ""}>FR</span>
+          <span className="sep">/</span>
+          <span className={lang === "en" ? "on" : ""}>EN</span>
+        </button>
+        <div className="header__right">
+          {guest && (
+            <button className="header__me" onClick={() => setProfileOpen(true)} aria-label={t("profile")}>
+              <Avatar guest={guest} urlFor={api.urlFor} size={36} />
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="main">

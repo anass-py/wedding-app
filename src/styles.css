@@ -77,16 +77,21 @@ img { display: block; }
 .app { height: 100%; display: flex; flex-direction: column; }
 .header {
   position: relative; display: grid; justify-items: center; text-align: center; gap: 4px;
-  padding: calc(env(safe-area-inset-top) + 18px) 64px 10px; z-index: 5;
+  padding: calc(env(safe-area-inset-top) + 18px) 72px 10px; z-index: 5;
 }
 .header__title {
-  margin: 0; font-family: var(--serif); font-weight: 600; font-size: 34px; line-height: 1; letter-spacing: 0.02em;
+  margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(22px, 7.2vw, 34px); line-height: 1; letter-spacing: 0.02em;
   display: inline-flex; align-items: baseline; gap: 0.22em; white-space: nowrap;
 }
 .header__amp { font-style: italic; font-weight: 500; color: var(--gold); font-size: 0.9em; position: relative; top: -0.02em; }
 .header__ornament { width: 132px; margin: 4px 0 0; }
 .header__sub { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-.header__me { position: absolute; right: 16px; top: calc(env(safe-area-inset-top) + 18px); border-radius: 50%; box-shadow: 0 0 0 2px var(--ring); transition: transform 0.15s; }
+.header__right { position: absolute; right: 16px; top: calc(env(safe-area-inset-top) + 18px); display: flex; align-items: center; gap: 10px; }
+.header__lang { position: absolute; left: 16px; top: calc(env(safe-area-inset-top) + 22px); }
+.header__me { border-radius: 50%; box-shadow: 0 0 0 2px var(--ring); transition: transform 0.15s; }
+.langtoggle { font-size: 11px; letter-spacing: 0.08em; color: var(--muted); padding: 7px 9px; border: 1px solid var(--ring); border-radius: 999px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.langtoggle .on { color: var(--text); font-weight: 700; }
+.langtoggle .sep { margin: 0 3px; opacity: 0.45; }
 .header__me:active { transform: scale(0.92); }
 .main { flex: 1; position: relative; min-height: 0; }
 
@@ -117,7 +122,7 @@ img { display: block; }
 @keyframes pop { from { opacity: 0; transform: translateX(-50%) translateY(8px); } }
 
 .avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.avatar--initial { display: grid; place-items: center; font-weight: 600; color: #fff; }
+.avatar--orb { display: inline-block; box-shadow: inset -5px -7px 12px rgba(0, 0, 0, 0.35), inset 3px 4px 8px rgba(255, 255, 255, 0.28), 0 0 0 1.5px rgba(217, 181, 109, 0.65); }
 
 /* ── Honeycomb wall ────────────────────────────────────────── */
 .honeycomb {
