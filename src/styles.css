@@ -390,9 +390,6 @@ img { display: block; }
 
 /* ── Profile sheet ─────────────────────────────────────────── */
 .profile__head { display: flex; align-items: center; justify-content: space-between; }
-.profile__avatar { display: grid; justify-items: center; gap: 6px; justify-self: center; }
-.profile__avatar .avatar { box-shadow: 0 0 0 2px var(--gold); }
-.profile__change { font-size: 12px; color: var(--muted); }
 .profile__stats { display: flex; justify-content: center; gap: 36px; }
 .profile__stats div { display: grid; justify-items: center; }
 .profile__stats b { font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1; }
@@ -431,6 +428,12 @@ img { display: block; }
   color: var(--gold); background: var(--bg3); box-shadow: 0 0 0 2px var(--ring);
 }
 .selfie__label { font-size: 13px; }
+.avatarpick { display: grid; justify-items: center; gap: 10px; }
+.avatarpick__row { display: flex; gap: 8px; animation: rise 0.25s both; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; background: var(--bg3); color: var(--text); transition: transform 0.12s, background 0.15s; }
+.pill:active { transform: scale(0.96); }
+.pill .icon { color: var(--gold); }
+.profile .selfie img, .profile .selfie .avatar { width: 84px; height: 84px; box-shadow: 0 0 0 2px var(--gold); }
 
 /* ── Celebration ───────────────────────────────────────────── */
 .celebrate {

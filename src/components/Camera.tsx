@@ -8,6 +8,10 @@ import { Icon } from "./Icon";
 interface Props {
   onCapture: (file: File) => void;
   onClose: () => void;
+  /** Photos only (no hold-to-record) — used for profile pictures. */
+  photoOnly?: boolean;
+  /** Which camera to open first; "user" = selfie. */
+  initialFacing?: Facing;
 }
 
 type Facing = "user" | "environment";
@@ -73,7 +77,7 @@ function drawCover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, mirror: b
  * The recorder reads an off-screen canvas painted from whichever camera is live and an audio
  * graph that the current microphone is plugged into, so a switch never interrupts the clip.
  */
-export function Camera({ onCapture, onClose }: Props) {
+export function Camera({ onCapture, onClose, photoOnly = false, initialFacing = "environment" }: Props) {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const camStream = useRef<MediaStream | null>(null);
@@ -162,7 +166,7 @@ export function Camera({ onCapture, onClose }: Props) {
   );
 
   useEffect(() => {
-    void openCamera("environment");
+    void openCamera(initialFacing);
     return () => {
       stopAll();
       window.clearTimeout(holdTimer.current);
@@ -278,7 +282,7 @@ export function Camera({ onCapture, onClose }: Props) {
     void audioCtx.current?.resume().catch(() => undefined);
     const isRecording = recorder.current?.state === "recording";
     press.current = { startedRecording: false, stopOnRelease: isRecording };
-    if (!isRecording) {
+    if (!isRecording && !photoOnly) {
       holdTimer.current = window.setTimeout(() => {
         if (press.current) {
           press.current.startedRecording = true;

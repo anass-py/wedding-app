@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
-import { processAvatar } from "../lib/image";
 import type { Api, Guest } from "../lib/types";
+import { AvatarPicker } from "./AvatarPicker";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -16,17 +16,6 @@ export function Onboarding({ api, onJoined }: Props) {
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const onSelfie = async (file: File | undefined) => {
-    if (!file) return;
-    try {
-      const blob = await processAvatar(file);
-      setSelfie({ blob, url: URL.createObjectURL(blob) });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
 
   const join = async () => {
     const trimmed = name.trim();
@@ -52,18 +41,15 @@ export function Onboarding({ api, onJoined }: Props) {
         {WEDDING.hashtag && <p className="muted">{WEDDING.hashtag}</p>}
         <p className="onboarding__intro">{t("onboardingIntro")}</p>
 
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="user"
-          hidden
-          onChange={(e) => {
-            void onSelfie(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-        <button className="selfie" onClick={() => fileRef.current?.click()} type="button">
+        <AvatarPicker
+          label={
+            <>
+              {t("addSelfie")} <span className="muted">({t("optional")})</span>
+            </>
+          }
+          onPicked={(blob) => setSelfie({ blob, url: URL.createObjectURL(blob) })}
+          onError={setError}
+        >
           {selfie ? (
             <img src={selfie.url} alt="" />
           ) : (
@@ -71,11 +57,7 @@ export function Onboarding({ api, onJoined }: Props) {
               <Icon name="camera" size={34} strokeWidth={1.4} />
             </span>
           )}
-          <span className="selfie__label">
-            {t("addSelfie")} <span className="muted">({t("optional")})</span>
-          </span>
-        </button>
-
+        </AvatarPicker>
         <label className="field">
           <span>{t("yourName")}</span>
           <input

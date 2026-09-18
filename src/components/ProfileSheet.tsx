@@ -1,10 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
-import { processAvatar } from "../lib/image";
 import type { Api, Guest, Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
-import { Icon } from "./Icon";
+import { AvatarPicker } from "./AvatarPicker";
 
 interface Props {
   api: Api;
@@ -15,17 +14,12 @@ interface Props {
   onToast: (msg: string) => void;
 }
 
-function isStandalone(): boolean {
-  return window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
-}
-
 export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }: Props) {
   const { t } = useI18n();
   const [name, setName] = useState(guest.name);
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [theme, setThemeState] = useState<ThemeName>(getTheme);
-  const fileRef = useRef<HTMLInputElement>(null);
   const pickTheme = (th: ThemeName) => {
     setTheme(th);
     setThemeState(th);
@@ -37,8 +31,6 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
   }, [photos, guest.id]);
 
   const dirty = name.trim() !== guest.name || !!selfie;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const showInstall = !isStandalone() && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
   const save = async () => {
     if (!dirty || !name.trim() || busy) return;
@@ -61,28 +53,13 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         <div className="profile__head">
           <p className="eyebrow">{t("profile")}</p>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="user"
-          hidden
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            if (!f) return;
-            try {
-              const blob = await processAvatar(f);
-              setSelfie({ blob, url: URL.createObjectURL(blob) });
-            } catch {
-              onToast(t("uploadFailed"));
-            }
-          }}
-        />
-        <button className="profile__avatar" onClick={() => fileRef.current?.click()} type="button">
+        <AvatarPicker
+          label={t("changeSelfie")}
+          onPicked={(blob) => setSelfie({ blob, url: URL.createObjectURL(blob) })}
+          onError={onToast}
+        >
           {selfie ? <img className="avatar" style={{ width: 84, height: 84 }} src={selfie.url} alt="" /> : <Avatar guest={guest} urlFor={api.urlFor} size={84} />}
-          <span className="profile__change">{t("changeSelfie")}</span>
-        </button>
+        </AvatarPicker>
         <div className="profile__stats">
           <div>
             <b>{stats.photos}</b>
@@ -108,14 +85,6 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
             </button>
           </div>
         </div>
-        {showInstall && (
-          <div className="install">
-            <div className="install__title">
-              <Icon name="phone" size={16} /> {t("installTitle")}
-            </div>
-            <div className="muted small">{ios ? t("installIos") : t("installAndroid")}</div>
-          </div>
-        )}
         <div className="sheet__actions">
           <button className="btn btn--ghost" onClick={onClose}>
             {t("cancel")}
