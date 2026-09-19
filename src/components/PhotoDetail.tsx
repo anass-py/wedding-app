@@ -46,7 +46,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [soundHint, setSoundHint] = useState(false);
-  const [fill, setFill] = useState(true); // portrait media fills the screen; ⤢ shows the whole frame
 
   const slideRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
@@ -62,8 +61,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   const next = index >= 0 && index < photos.length - 1 ? photos[index + 1] : null;
   const mine = api.guest?.id === photo.guest_id;
   const isVideo = photo.kind === "video";
-  const portrait = photo.width && photo.height ? photo.height / photo.width >= 1.15 : true;
-  const cover = portrait && fill;
   const fullUrl = api.urlFor(photo.path);
   const thumbUrl = api.urlFor(photo.thumb_path);
 
@@ -286,7 +283,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
         onPointerCancel={onPointerUp}
       >
         <div ref={slideRef} key={photo.id} className={"viewer__slide" + (dir ? ` viewer__slide--${dir}` : "")}>
-          <div ref={mediaRef} className={"viewer__media" + (cover ? " viewer__media--cover" : "")}>
+          <div ref={mediaRef} className="viewer__media">
             {isVideo ? (
               <video
                 ref={videoRef}
@@ -365,11 +362,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
             {isVideo && (
               <button className="tool" onClick={toggleMute} aria-label={muted ? t("unmute") : t("mute")}>
                 <Icon name={muted ? "muted" : "sound"} size={22} />
-              </button>
-            )}
-            {portrait && (
-              <button className={"tool" + (fill ? "" : " tool--on")} onClick={() => setFill((f) => !f)} aria-label={t("fit")}>
-                <Icon name={fill ? "fit" : "fill"} size={20} />
               </button>
             )}
             {mine && (
