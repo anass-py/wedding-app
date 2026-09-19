@@ -136,6 +136,25 @@ drop function if exists public.claim_guest(text, text);
 drop function if exists public.gen_recovery_code();
 drop table if exists public.guest_secrets;
 
+-- Rename duplicates that exist already (the first one keeps the name, later ones get " 2", " 3"…)
+do $$
+declare r record; n int; candidate text;
+begin
+  for r in
+    select id, name from (
+      select id, name, row_number() over (partition by lower(btrim(name)) order by created_at) as rn from public.guests
+    ) d where rn > 1 order by name
+  loop
+    n := 2;
+    loop
+      candidate := btrim(r.name) || ' ' || n;
+      exit when not exists (select 1 from public.guests where lower(btrim(name)) = lower(candidate));
+      n := n + 1;
+    end loop;
+    update public.guests set name = candidate where id = r.id;
+  end loop;
+end $$;
+
 create unique index if not exists guests_name_unique on public.guests (lower(btrim(name)));
 
 create or replace function public.claim_guest(p_name text) returns setof public.guests
