@@ -732,3 +732,21 @@ img { display: block; }
   .wall__divider span { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: var(--bg); padding: 4px 0; color: var(--gold); font-size: 11px; }
   .wall__photos .masonry { padding-left: 20px; }
 }
+
+/* ── Guestbook notes drift gently, each with its own rhythm ─── */
+.note {
+  transform-origin: 50% 60%;
+  animation: notefloat var(--float-dur, 8s) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -1.7s);
+}
+.note.card--new {
+  animation: cardin 0.55s cubic-bezier(0.2, 1.1, 0.3, 1) both, notefloat var(--float-dur, 8s) ease-in-out 0.55s infinite;
+}
+@keyframes notefloat {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(-3px) rotate(-0.7deg); }
+  65% { transform: translateY(2px) rotate(0.6deg); }
+}
+.note__quote { animation: quotebreathe 5.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -0.9s); transform-origin: 30% 60%; }
+@keyframes quotebreathe { 50% { transform: scale(1.12) rotate(-5deg); opacity: 0.6; } }
+.note:hover, .note:active { animation-play-state: paused; }

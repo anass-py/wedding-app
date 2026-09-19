@@ -41,8 +41,8 @@ export function Guestbook({ messages, urlFor, meId, onHeart, onDelete, onOpenGue
             onHeart={onHeart}
             onDelete={onDelete}
             onOpenGuest={onOpenGuest}
+            index={i}
             className={isNew(m.id) ? "card--new" : ""}
-            style={firstPaint ? { animationDelay: `${Math.min(i, 8) * 70}ms` } : undefined}
           />
         ))}
         {messages.length === 0 && <p className="guestbook__empty muted">{t("guestbookEmpty", { couple: WEDDING.couple })}</p>}

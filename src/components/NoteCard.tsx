@@ -14,12 +14,14 @@ interface Props {
   onOpenGuest?: (guest: Message["guest"]) => void;
   className?: string;
   style?: React.CSSProperties;
+  /** Position in the list — gives each card its own phase in the idle float. */
+  index?: number;
 }
 
 const DOUBLE_TAP_MS = 320;
 
 /** A guestbook message: gold quotation mark, italic serif, author. Double-tap to ❤️. */
-export function NoteCard({ message: m, urlFor, meId, onHeart, onDelete, onOpenGuest, className = "", style }: Props) {
+export function NoteCard({ message: m, urlFor, meId, onHeart, onDelete, onOpenGuest, className = "", style, index = 0 }: Props) {
   const lastTap = useRef(0);
   const [flash, setFlash] = useState(0);
   const onClick = () => {
@@ -34,7 +36,12 @@ export function NoteCard({ message: m, urlFor, meId, onHeart, onDelete, onOpenGu
     } else lastTap.current = now;
   };
   return (
-    <div className={"note " + className} style={style} onClick={onClick} role="article">
+    <div
+      className={"note " + className}
+      style={{ ["--i" as string]: index, ["--float-dur" as string]: `${7 + (index % 3) * 1.1}s`, ...style }}
+      onClick={onClick}
+      role="article"
+    >
       <span className="note__quote" aria-hidden="true">
         “
       </span>
