@@ -119,6 +119,21 @@ export function createDemoApi(): Api {
     async listGuests() {
       return [...guests, ...(me ? [me] : [])];
     },
+    async claimGuest(name, code) {
+      const g = guests.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
+      if (!g || code.trim().toUpperCase() !== "DEMO42") throw new Error("invalid name or code");
+      me = { ...g, id: "me" };
+      photos = photos.map((p) => (p.guest_id === g.id ? { ...p, guest_id: "me", guest: me! } : p));
+      try {
+        localStorage.setItem("wedding.demo.guest", JSON.stringify({ ...me, avatar_path: null }));
+      } catch {
+        /* ignore */
+      }
+      return me;
+    },
+    async myRecoveryCode() {
+      return me ? "DEMO42" : null;
+    },
     async updateGuest(name, avatar, socials) {
       if (!me) throw new Error("Not registered");
       me = { ...me, name: name.trim(), socials: socials ?? me.socials };

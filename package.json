@@ -16,7 +16,8 @@
     "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts",
     "memories": "node --env-file-if-exists=.env --import tsx scripts/memories.ts",
     "doctor": "node --env-file-if-exists=.env --import tsx scripts/doctor.ts",
-    "dev:https": "VITE_HTTPS=1 vite --host"
+    "dev:https": "VITE_HTTPS=1 vite --host",
+    "migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

@@ -195,6 +195,22 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return guest;
     },
 
+    async claimGuest(name, code) {
+      if (!authId) throw new Error("init() first");
+      const { data, error } = await sb.rpc("claim_guest", { p_name: name.trim(), p_code: code.trim().toUpperCase() });
+      if (error) throw error;
+      const row = (Array.isArray(data) ? data[0] : data) as GuestRow | undefined;
+      if (!row) throw new Error("invalid name or code");
+      guest = toGuest(row);
+      return guest;
+    },
+
+    async myRecoveryCode() {
+      const { data, error } = await sb.rpc("my_recovery_code");
+      if (error) return null;
+      return (data as string | null) ?? null;
+    },
+
     async listGuests() {
       const { data, error } = await sb.from("guests").select(`${GUEST_SELECT}, created_at`).order("created_at");
       if (error) throw error;

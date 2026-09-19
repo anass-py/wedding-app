@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { describeError } from "../lib/errors";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
@@ -25,6 +25,23 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
   const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [theme, setThemeState] = useState<ThemeName>(getTheme);
+  const [code, setCode] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    api.myRecoveryCode().then((c) => live && setCode(c));
+    return () => {
+      live = false;
+    };
+  }, [api]);
+  const copyCode = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      onToast(t("copied"));
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
   const pickTheme = (th: ThemeName) => {
     setTheme(th);
     setThemeState(th);
@@ -106,6 +123,17 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
             ))}
           </div>
         </div>
+        {code && (
+          <div className="field">
+            <span>
+              {t("recoveryTitle")} <span className="muted">— {t("recoveryHint")}</span>
+            </span>
+            <button type="button" className="codebox" onClick={copyCode} aria-label={t("copied")}>
+              <span className="codebox__code">{code}</span>
+              <Icon name="copy" size={18} />
+            </button>
+          </div>
+        )}
         <div className="field">
           <span>{t("look")}</span>
           <div className="segmented">

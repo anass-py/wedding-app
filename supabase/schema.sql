@@ -125,3 +125,58 @@ create policy "photos bucket: upload own" on storage.objects
 create policy "photos bucket: delete own" on storage.objects
   for delete to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ── v2.5: reconnect on another phone ─────────────────────────────────────────
+-- Each guest gets a 6-character code (shown only to them). "Déjà inscrit ?" on the
+-- join screen re-links a new device to their profile with name + code.
+create table if not exists public.guest_secrets (
+  guest_id uuid primary key references public.guests(id) on delete cascade,
+  code     text not null
+);
+alter table public.guest_secrets enable row level security; -- no policies: unreadable by guests, only via the functions below
+
+create or replace function public.gen_recovery_code() returns text
+language plpgsql volatile as $$
+declare alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; result text := ''; i int;
+begin
+  for i in 1..6 loop
+    result := result || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+  end loop;
+  return result;
+end $$;
+revoke execute on function public.gen_recovery_code() from public;
+
+create or replace function public.guest_secret_on_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.guest_secrets (guest_id, code) values (new.id, public.gen_recovery_code()) on conflict do nothing;
+  return new;
+end $$;
+drop trigger if exists guests_secret on public.guests;
+create trigger guests_secret after insert on public.guests for each row execute function public.guest_secret_on_insert();
+
+insert into public.guest_secrets (guest_id, code)
+select g.id, public.gen_recovery_code() from public.guests g
+where not exists (select 1 from public.guest_secrets s where s.guest_id = g.id);
+
+create or replace function public.my_recovery_code() returns text
+language sql stable security definer set search_path = public as $$
+  select s.code from public.guest_secrets s join public.guests g on g.id = s.guest_id where g.auth_id = auth.uid()
+$$;
+grant execute on function public.my_recovery_code() to authenticated;
+
+create or replace function public.claim_guest(p_name text, p_code text) returns setof public.guests
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  if exists (select 1 from public.guests where auth_id = auth.uid()) then raise exception 'already registered'; end if;
+  select g.id into gid
+  from public.guests g join public.guest_secrets s on s.guest_id = g.id
+  where lower(btrim(g.name)) = lower(btrim(p_name)) and upper(btrim(s.code)) = upper(btrim(p_code))
+  limit 1;
+  if gid is null then raise exception 'invalid name or code'; end if;
+  update public.guests set auth_id = auth.uid() where id = gid;
+  return query select * from public.guests where id = gid;
+end $$;
+grant execute on function public.claim_guest(text, text) to authenticated;

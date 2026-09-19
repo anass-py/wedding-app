@@ -51,6 +51,10 @@ npm run doctor           # checks auth, tables, bucket, upload rights, realtime 
 npm run dev              # demo banner disappears → you're live
 ```
 
+Whenever a new version changes the database, the doctor says so. Either re-run `supabase/schema.sql`
+in the SQL Editor (always safe), or add a personal access token as `SUPABASE_ACCESS_TOKEN` in `.env`
+(supabase.com → Account → Access Tokens) and run `npm run migrate`.
+
 ## 3. Put it online
 
 Any static host works. Vercel is the least effort:
