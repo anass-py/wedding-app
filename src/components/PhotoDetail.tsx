@@ -42,7 +42,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   const [likeAnim, setLikeAnim] = useState<{ photoId: string; n: number } | null>(null);
   const [flash, setFlash] = useState<{ photoId: string; n: number } | null>(null);
   const [playFlash, setPlayFlash] = useState<{ n: number; playing: boolean } | null>(null);
-  const [saving, setSaving] = useState(false);
   const [dir, setDir] = useState<"left" | "right" | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -52,7 +51,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   const [fill, setFill] = useState(true); // portrait media fills the screen; ⤢ shows the whole frame
 
   const slideRef = useRef<HTMLDivElement>(null);
-  const blobCache = useRef(new Map<string, Blob>());
   const mediaRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pointers = useRef(new Map<number, Pt>());
@@ -93,25 +91,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
-
-  // Fetch the current file in the background so "Save" can hand it to the share sheet
-  // immediately on the tap (iOS refuses to open it after an async wait).
-  useEffect(() => {
-    const id = photo.id;
-    if (blobCache.current.has(id)) return;
-    let live = true;
-    fetch(api.urlFor(photo.path))
-      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
-      .then((b) => {
-        if (!live) return;
-        if (blobCache.current.size > 6) blobCache.current.delete(blobCache.current.keys().next().value!);
-        blobCache.current.set(id, b);
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [photo.id, photo.path, api]);
 
   // Preload neighbours so swiping feels instant.
   useEffect(() => {
@@ -286,42 +265,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   useEffect(() => () => window.clearTimeout(singleTap.current), []);
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const fileName = () => {
-    const ext = isVideo ? (photo.path.match(/\.(\w+)$/)?.[1] ?? "mp4") : "jpg";
-    return `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.${ext}`;
-  };
-  const downloadBlob = (blob: Blob) => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName();
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-    onToast?.(t("saved"));
-  };
-  const openForLongPress = () => {
-    window.open(fullUrl, "_blank", "noopener");
-    onToast?.(t("saveHint"));
-  };
-
-  /** A real download (Files/Downloads on iPhone, Downloads on Android/desktop) — never the share sheet. */
-  const save = () => {
-    if (saving) return;
-    const cached = blobCache.current.get(photo.id);
-    if (cached) return downloadBlob(cached);
-    setSaving(true);
-    fetch(fullUrl)
-      .then((r) => r.blob())
-      .then((blob) => {
-        blobCache.current.set(photo.id, blob);
-        downloadBlob(blob);
-      })
-      .catch(openForLongPress)
-      .finally(() => setSaving(false));
-  };
-
   const remove = async () => {
     if (!window.confirm(t("confirmDelete"))) return;
     setDeleting(true);
@@ -431,9 +374,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
                 <Icon name={fill ? "fit" : "fill"} size={20} />
               </button>
             )}
-            <button className="tool" onClick={save} disabled={saving} aria-label={t("openFull")}>
-              <Icon name="download" size={22} />
-            </button>
             {mine && (
               <button className="tool tool--danger" onClick={remove} disabled={deleting} aria-label={t("delete")}>
                 <Icon name="trash" size={21} />
