@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import type { Message } from "../lib/types";
 import { NoteCard } from "./NoteCard";
@@ -45,7 +44,7 @@ export function Guestbook({ messages, urlFor, meId, onHeart, onDelete, onOpenGue
             className={isNew(m.id) ? "card--new" : ""}
           />
         ))}
-        {messages.length === 0 && <p className="guestbook__empty muted">{t("guestbookEmpty", { couple: WEDDING.couple })}</p>}
+        {messages.length === 0 && <p className="guestbook__empty muted">{t("guestbookEmpty")}</p>}
       </div>
       {layout === "strip" && (
         <div className="ornament guestbook__rule" aria-hidden="true">

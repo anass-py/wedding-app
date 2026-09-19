@@ -5,7 +5,6 @@ import { buzz } from "../lib/haptics";
 import { describeError } from "../lib/errors";
 import { ImageError } from "../lib/image";
 import type { Api, Message, Photo } from "../lib/types";
-import { WEDDING } from "../config";
 import { VideoError, isVideoFile } from "../lib/video";
 import { Camera, isCameraSupported } from "./Camera";
 import { Icon } from "./Icon";
@@ -123,7 +122,7 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage }: Props)
 
         {writing ? (
           <div className="compose">
-            <p className="compose__to">{t("writeMessage", { couple: WEDDING.couple })}</p>
+            <p className="compose__to">{t("composeTitle")}</p>
             <textarea
               className="input compose__text"
               value={text}
@@ -181,7 +180,7 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage }: Props)
               <span className="bigbtn__icon">
                 <Icon name="quill" size={24} />
               </span>
-              {t("writeMessage", { couple: WEDDING.couple })}
+              {t("writeMessage")}
             </button>
           </div>
         ) : (
