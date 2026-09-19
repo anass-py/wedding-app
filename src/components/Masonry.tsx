@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "../i18n";
 import type { Photo } from "../lib/types";
+import { HeartRain } from "./HeartRain";
 import { RoleBadge } from "./RoleBadge";
 import { formatDuration } from "../lib/video";
 import { buzz } from "../lib/haptics";
@@ -219,6 +220,7 @@ export function Masonry({
                         {formatDuration(it.duration)}
                       </span>
                     )}
+                    <HeartRain count={it.hearts} id={it.id} />
                     {highlight?.has(it.id) && (
                       <span className="card__star">
                         <Icon name="star" size={13} fill strokeWidth={0} />

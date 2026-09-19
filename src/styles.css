@@ -750,3 +750,17 @@ img { display: block; }
 .note__quote { animation: quotebreathe 5.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -0.9s); transform-origin: 30% 60%; }
 @keyframes quotebreathe { 50% { transform: scale(1.12) rotate(-5deg); opacity: 0.6; } }
 .note:hover, .note:active { animation-play-state: paused; }
+
+/* ── Hearts rising from liked photos (Instagram-Live style) ── */
+.rain { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.rain__heart {
+  position: absolute; left: var(--x); bottom: -14px; font-size: 15px; line-height: 1; color: #ff5a60; opacity: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  animation: rainup var(--dur, 5s) linear infinite; animation-delay: var(--d, 0s);
+}
+@keyframes rainup {
+  0% { opacity: 0; transform: translate(0, 0) scale(calc(var(--s, 1) * 0.6)); }
+  12% { opacity: 0.85; }
+  60% { opacity: 0.6; }
+  100% { opacity: 0; transform: translate(var(--sway, 0px), -150px) scale(var(--s, 1)); }
+}
