@@ -216,7 +216,6 @@ export default function App() {
           onHeart={toggleHeart}
           onDelete={removePhoto}
           onOpenGuest={setGuestCard}
-          onToast={showToast}
         />
       )}
       {guestCard && <GuestCard guest={guestCard} photos={photos} api={api} onClose={() => setGuestCard(null)} />}

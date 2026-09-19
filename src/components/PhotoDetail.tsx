@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
-import { WEDDING } from "../config";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
@@ -18,7 +17,6 @@ interface Props {
   onHeart: (photo: Photo) => void;
   onDelete: (photo: Photo) => Promise<void>;
   onOpenGuest: (guest: Photo["guest"]) => void;
-  onToast?: (msg: string) => void;
 }
 
 const SWIPE_PX = 70;
@@ -36,7 +34,7 @@ interface Pt {
  * overlaid. Swipe ←/→ between items, swipe ↓ to close, tap = play/pause (video) or
  * hide/show the overlay (photo), double-tap = ❤️, pinch = zoom (photo).
  */
-export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete, onOpenGuest, onToast }: Props) {
+export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete, onOpenGuest }: Props) {
   const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [likeAnim, setLikeAnim] = useState<{ photoId: string; n: number } | null>(null);
