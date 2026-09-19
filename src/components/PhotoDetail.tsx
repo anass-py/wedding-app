@@ -306,33 +306,17 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     onToast?.(t("saveHint"));
   };
 
+  /** A real download (Files/Downloads on iPhone, Downloads on Android/desktop) — never the share sheet. */
   const save = () => {
     if (saving) return;
     const cached = blobCache.current.get(photo.id);
-    const shareable = (blob: Blob) => {
-      const file = new File([blob], fileName(), { type: blob.type || (isVideo ? "video/mp4" : "image/jpeg") });
-      return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] }) ? file : null;
-    };
-    if (cached) {
-      const file = shareable(cached);
-      if (file) {
-        // Synchronous within the tap → allowed everywhere, incl. iOS ("Save Image" is in the sheet).
-        navigator.share({ files: [file], title: WEDDING.couple }).catch((e: unknown) => {
-          if (!(e instanceof DOMException && e.name === "AbortError")) openForLongPress();
-        });
-      } else downloadBlob(cached);
-      return;
-    }
+    if (cached) return downloadBlob(cached);
     setSaving(true);
     fetch(fullUrl)
       .then((r) => r.blob())
       .then((blob) => {
         blobCache.current.set(photo.id, blob);
-        const file = shareable(blob);
-        if (!file) return downloadBlob(blob);
-        return navigator.share({ files: [file], title: WEDDING.couple }).catch((e: unknown) => {
-          if (!(e instanceof DOMException && e.name === "AbortError")) openForLongPress();
-        });
+        downloadBlob(blob);
       })
       .catch(openForLongPress)
       .finally(() => setSaving(false));
