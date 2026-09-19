@@ -93,15 +93,18 @@ create policy "scores: read all"    on public.photo_scores for select to authent
 -- ── Realtime ────────────────────────────────────────────────────────────────
 do $$
 begin
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'photos') then
+  begin
     alter publication supabase_realtime add table public.photos;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'hearts') then
+  exception when duplicate_object then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.hearts;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'photo_scores') then
+  exception when duplicate_object then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.photo_scores;
-  end if;
+  exception when duplicate_object then null;
+  end;
 end $$;
 
 -- ── Storage ─────────────────────────────────────────────────────────────────
@@ -260,12 +263,14 @@ create policy "mhearts: delete own"  on public.message_hearts for delete to auth
 
 do $$
 begin
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages') then
+  begin
     alter publication supabase_realtime add table public.messages;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'message_hearts') then
+  exception when duplicate_object then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.message_hearts;
-  end if;
+  exception when duplicate_object then null;
+  end;
 end $$;
 
 -- ── Migrations without copy/paste ───────────────────────────────────────────
