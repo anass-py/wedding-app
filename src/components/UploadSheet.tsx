@@ -123,9 +123,7 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage }: Props)
 
         {writing ? (
           <div className="compose">
-            <p className="compose__to">
-              {t("writeMessage")} <span className="muted">· {WEDDING.couple}</span>
-            </p>
+            <p className="compose__to">{t("writeMessage", { couple: WEDDING.couple })}</p>
             <textarea
               className="input compose__text"
               value={text}
@@ -183,7 +181,7 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage }: Props)
               <span className="bigbtn__icon">
                 <Icon name="quill" size={24} />
               </span>
-              {t("writeMessage")}
+              {t("writeMessage", { couple: WEDDING.couple })}
             </button>
           </div>
         ) : (
