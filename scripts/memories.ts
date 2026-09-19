@@ -28,6 +28,8 @@ import { z } from "zod";
 import { RANKING, WEDDING } from "../src/config";
 import { ffmpegPath } from "./transcode";
 
+const DB_SCHEMA = process.env.SUPABASE_DB_SCHEMA || "public";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "photos";
 const run = promisify(execFile);
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
@@ -86,7 +88,7 @@ async function fromSupabase(dir: string): Promise<Moment[]> {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or use --from <folder>)");
-  const sb = createClient(url, key, { auth: { persistSession: false } });
+  const sb = createClient(url, key, { auth: { persistSession: false }, db: { schema: DB_SCHEMA } });
   const { data, error } = await sb
     .from("photos")
     .select("id, kind, path, created_at, caption, duration, guest:guests!photos_guest_id_fkey(name), hearts(guest_id), photo_scores(score, theme, tags, reason)")
@@ -104,7 +106,7 @@ async function fromSupabase(dir: string): Promise<Moment[]> {
       id: r.id,
       kind: r.kind === "video" ? "video" : "photo",
       file: join(dir, r.id + extname(r.path)),
-      url: sb.storage.from("photos").getPublicUrl(r.path).data.publicUrl,
+      url: sb.storage.from(STORAGE_BUCKET).getPublicUrl(r.path).data.publicUrl,
       at: r.created_at,
       guest: g?.name ?? "?",
       caption: r.caption,

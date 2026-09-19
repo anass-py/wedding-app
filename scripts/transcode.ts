@@ -17,8 +17,10 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+const DB_SCHEMA = process.env.SUPABASE_DB_SCHEMA || "public";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "photos";
 const run = promisify(execFile);
-const BUCKET = "photos";
+const BUCKET = STORAGE_BUCKET;
 const WEB_SUFFIX = "_web.mp4";
 
 function env(name: string, fallback?: string): string {

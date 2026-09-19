@@ -11,11 +11,16 @@
 3. Validated → merge into `main` (`git checkout main && git merge dev && git push`) → production
    deploys itself in about a minute.
 
-## Databases
+## One database, two namespaces
 
-Use **two Supabase projects** so test data never mixes with the real wall:
+Production uses the `public` tables and the `photos` bucket. Development uses an identical copy
+in the `dev` namespace and the `photos-dev` bucket — same Supabase project, same keys, no mixing.
 
-- `.env` on your laptop → the **dev** project.
-- Vercel → Settings → Environment Variables: the `VITE_SUPABASE_*` values for **Production** point to
-  the real project, the ones for **Preview** point to the dev project.
-- Run `supabase/schema.sql` on both whenever a version says it changed the database.
+- **Once:** Supabase → SQL Editor → run `supabase/schema.dev.sql` (generated from `schema.sql` by
+  `npm run schema:dev`), then Settings → API → *Exposed schemas* → add `dev`.
+- **Local:** `.env` has `VITE_DB_SCHEMA=dev`, `VITE_STORAGE_BUCKET=photos-dev` (and the
+  `SUPABASE_DB_SCHEMA` / `STORAGE_BUCKET` pair for the scripts).
+- **Vercel:** add the two `VITE_*` variables for the **Preview** environment only; Production has none
+  and therefore uses `public` / `photos`.
+- When a version changes the database: run `schema.dev.sql` first (dev), validate, then `schema.sql`
+  (production) when merging.

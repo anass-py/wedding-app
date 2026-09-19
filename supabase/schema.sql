@@ -93,13 +93,13 @@ create policy "scores: read all"    on public.photo_scores for select to authent
 -- ── Realtime ────────────────────────────────────────────────────────────────
 do $$
 begin
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'photos') then
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'photos') then
     alter publication supabase_realtime add table public.photos;
   end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'hearts') then
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'hearts') then
     alter publication supabase_realtime add table public.hearts;
   end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'photo_scores') then
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'photo_scores') then
     alter publication supabase_realtime add table public.photo_scores;
   end if;
 end $$;

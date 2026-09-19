@@ -15,6 +15,8 @@ import { createClient } from "@supabase/supabase-js";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
+const DB_SCHEMA = process.env.SUPABASE_DB_SCHEMA || "public";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "photos";
 // Keep in sync with src/config.ts THEMES.
 const THEMES = ["couple", "ceremony", "decoration", "guests", "dance", "food", "details", "venue", "other"] as const;
 
@@ -49,7 +51,7 @@ Tags are short and lowercase, e.g. "first dance", "laughing", "golden hour", "gr
 
 const MODEL = process.env.RANK_MODEL ?? "claude-opus-5";
 const CONCURRENCY = Number(process.env.RANK_CONCURRENCY ?? 4);
-const BUCKET = "photos";
+const BUCKET = STORAGE_BUCKET;
 
 function env(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;

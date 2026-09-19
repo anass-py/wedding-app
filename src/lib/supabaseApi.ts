@@ -4,7 +4,13 @@ import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
 import type { Api, Guest, Photo, RealtimeHandlers, Score, Socials } from "./types";
 
-const BUCKET = "photos";
+/**
+ * Production talks to the `public` tables and the `photos` bucket. Set VITE_DB_SCHEMA=dev and
+ * VITE_STORAGE_BUCKET=photos-dev (local .env, Vercel "Preview") to work on a separate copy in
+ * the same Supabase project without touching the real wall.
+ */
+const SCHEMA = (import.meta.env.VITE_DB_SCHEMA as string | undefined) || "public";
+const BUCKET = (import.meta.env.VITE_STORAGE_BUCKET as string | undefined) || "photos";
 
 const PHOTO_SELECT =
   "id, guest_id, kind, duration, path, thumb_path, width, height, caption, created_at, " +
@@ -54,7 +60,7 @@ function toScore(r: ScoreRow | null): Score | null {
 }
 
 export function createSupabaseApi(url: string, anonKey: string): Api {
-  const sb = createClient(url, anonKey);
+  const sb = createClient(url, anonKey, { db: { schema: SCHEMA } });
   let guest: Guest | null = null;
   let authId: string | null = null;
 
@@ -226,22 +232,22 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     subscribe(h: RealtimeHandlers) {
       const channel: RealtimeChannel = sb
         .channel("wall")
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "photos" }, async (p) => {
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "photos" }, async (p) => {
           const photo = await fetchOne((p.new as { id: string }).id).catch(() => null);
           if (photo) h.onPhotoInsert(photo);
         })
-        .on("postgres_changes", { event: "DELETE", schema: "public", table: "photos" }, (p) => {
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "photos" }, (p) => {
           h.onPhotoDelete((p.old as { id: string }).id);
         })
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "hearts" }, (p) => {
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "hearts" }, (p) => {
           const r = p.new as { photo_id: string; guest_id: string };
           h.onHeart(r.photo_id, r.guest_id, 1);
         })
-        .on("postgres_changes", { event: "DELETE", schema: "public", table: "hearts" }, (p) => {
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "hearts" }, (p) => {
           const r = p.old as { photo_id: string; guest_id: string };
           h.onHeart(r.photo_id, r.guest_id, -1);
         })
-        .on("postgres_changes", { event: "*", schema: "public", table: "photo_scores" }, (p) => {
+        .on("postgres_changes", { event: "*", schema: SCHEMA, table: "photo_scores" }, (p) => {
           const r = p.new as ScoreRow & { photo_id?: string };
           const s = toScore(r);
           if (r.photo_id && s) h.onScore(r.photo_id, s);

@@ -142,6 +142,8 @@ with slow Ken-Burns motion, 3-second video clips, crossfades, title cards and yo
 Without `ANTHROPIC_API_KEY` (or with `--no-ai`) it orders by hearts and time instead.
 `--from ./folder` renders from local files, e.g. the photographer's selection.
 
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the dev/production workflow (branches, the `dev` namespace).
+
 ## Wedding-day checklist
 
 - [ ] `src/config.ts` has your names; deployed; QR printed on cards for the tables.

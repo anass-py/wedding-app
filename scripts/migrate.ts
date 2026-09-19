@@ -1,6 +1,7 @@
 /**
  * Applies supabase/schema.sql to the project — no copy/paste into the SQL editor.
- *   npm run migrate
+ *   npm run migrate            # production tables (public.*)
+ *   npm run migrate -- --dev   # development copy (dev.*), from supabase/schema.dev.sql
  * Needs SUPABASE_ACCESS_TOKEN in .env (supabase.com → Account → Access Tokens → generate).
  * Without it, prints what to paste instead.
  */
@@ -9,7 +10,8 @@ import { readFileSync } from "node:fs";
 const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
 const ref = url.match(/^https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1];
 const token = process.env.SUPABASE_ACCESS_TOKEN;
-const sql = readFileSync(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+const dev = process.argv.includes("--dev");
+const sql = readFileSync(new URL(dev ? "../supabase/schema.dev.sql" : "../supabase/schema.sql", import.meta.url), "utf8");
 
 if (!ref) {
   console.error("VITE_SUPABASE_URL missing or malformed in .env");
@@ -30,4 +32,4 @@ if (!res.ok) {
   console.error(`Migration failed (${res.status}): ${text.slice(0, 800)}`);
   process.exit(1);
 }
-console.log("schema.sql applied ✓");
+console.log(`${dev ? "schema.dev.sql" : "schema.sql"} applied ✓`);

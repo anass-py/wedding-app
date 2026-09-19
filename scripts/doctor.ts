@@ -6,6 +6,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 
+const DB_SCHEMA = process.env.SUPABASE_DB_SCHEMA || "public";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "photos";
 const ok = (msg: string) => console.log(`  ✓ ${msg}`);
 const bad = (msg: string, fix?: string) => {
   console.log(`  ✗ ${msg}`);
@@ -29,7 +31,8 @@ async function main() {
     return done();
   }
   ok(`project ${url}`);
-  const sb = createClient(url, anon);
+  const sb = createClient(url, anon, { db: { schema: DB_SCHEMA } });
+  console.log(`  · tables: ${DB_SCHEMA}.* · bucket: ${STORAGE_BUCKET}`);
 
   // Anonymous auth
   const { data: auth, error: authErr } = await sb.auth.signInAnonymously();
@@ -71,20 +74,20 @@ async function main() {
 
   // Storage upload into own folder, public URL readable, delete
   const path = `${uidv}/doctor.jpg`;
-  const { error: upErr } = await sb.storage.from("photos").upload(path, TINY_JPEG, { contentType: "image/jpeg" });
+  const { error: upErr } = await sb.storage.from(STORAGE_BUCKET).upload(path, TINY_JPEG, { contentType: "image/jpeg" });
   if (upErr) bad(`storage upload: ${upErr.message}`, "bucket “photos” or its policies are missing — re-run supabase/schema.sql");
   else {
     ok("storage upload allowed");
-    const pub = sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+    const pub = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
     const res = await fetch(pub);
     if (res.ok) ok("uploaded file is publicly readable");
     else bad(`public URL returned ${res.status}`, "bucket must be public (schema.sql sets it)");
-    await sb.storage.from("photos").remove([path]);
+    await sb.storage.from(STORAGE_BUCKET).remove([path]);
   }
 
   // Realtime
   const realtime = await new Promise<string>((resolve) => {
-    const ch = sb.channel("doctor").on("postgres_changes", { event: "*", schema: "public", table: "photos" }, () => undefined);
+    const ch = sb.channel("doctor").on("postgres_changes", { event: "*", schema: DB_SCHEMA, table: "photos" }, () => undefined);
     const t = setTimeout(() => resolve("timeout"), 8000);
     ch.subscribe((status) => {
       if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -100,7 +103,7 @@ async function main() {
   // Clean up the doctor guest (own row: RLS allows update but not delete — service role below if available)
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (service) {
-    const admin = createClient(url, service, { auth: { persistSession: false } });
+    const admin = createClient(url, service, { auth: { persistSession: false }, db: { schema: DB_SCHEMA } });
     const { count, error } = await admin.from("photos").select("id", { count: "exact", head: true });
     if (error) bad(`service role key: ${error.message}`, "Project Settings → API Keys → service_role (secret)");
     else ok(`service role key works (${count ?? 0} photos in the database)`);
