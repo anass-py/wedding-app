@@ -46,8 +46,19 @@ export function usePhotos(api: Api, ready: boolean, onRemoteHeart?: (photoId: st
       },
       onPhotoDelete: (id) => setPhotos((prev) => prev.filter((p) => p.id !== id)),
       onHeart: (photoId, guestId, delta) => {
-        // Our own hearts were already applied optimistically.
-        if (guestId === myId.current) return;
+        if (guestId === myId.current) {
+          // Same profile: either our own optimistic tap (already applied) or another of our
+          // devices — apply only if the local state doesn't reflect it yet.
+          setPhotos((prev) =>
+            prev.map((p) => {
+              if (p.id !== photoId) return p;
+              if (delta > 0 && !p.hearted) return { ...p, hearted: true, hearts: p.hearts + 1 };
+              if (delta < 0 && p.hearted) return { ...p, hearted: false, hearts: Math.max(0, p.hearts - 1) };
+              return p;
+            }),
+          );
+          return;
+        }
         if (delta > 0) remoteHeart.current?.(photoId);
         setPhotos((prev) =>
           prev.map((p) => (p.id === photoId ? { ...p, hearts: Math.max(0, p.hearts + delta) } : p)),
