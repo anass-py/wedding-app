@@ -103,6 +103,9 @@ export function createDemoApi(): Api {
       return me;
     },
     async createGuest(name, avatar) {
+      if (guests.some((g) => g.name.toLowerCase() === name.trim().toLowerCase())) {
+        throw Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" });
+      }
       me = { id: "me", name: name.trim(), avatar_path: null, socials: {}, created_at: new Date().toISOString() };
       if (avatar) {
         const url = URL.createObjectURL(avatar);
@@ -119,9 +122,9 @@ export function createDemoApi(): Api {
     async listGuests() {
       return [...guests, ...(me ? [me] : [])];
     },
-    async claimGuest(name, code) {
+    async claimGuest(name) {
       const g = guests.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
-      if (!g || code.trim().toUpperCase() !== "DEMO42") throw new Error("invalid name or code");
+      if (!g) throw new Error("no guest with this name");
       me = { ...g, id: "me" };
       photos = photos.map((p) => (p.guest_id === g.id ? { ...p, guest_id: "me", guest: me! } : p));
       try {
@@ -130,9 +133,6 @@ export function createDemoApi(): Api {
         /* ignore */
       }
       return me;
-    },
-    async myRecoveryCode() {
-      return me ? "DEMO42" : null;
     },
     async updateGuest(name, avatar, socials) {
       if (!me) throw new Error("Not registered");

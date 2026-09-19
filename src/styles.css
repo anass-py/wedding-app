@@ -607,6 +607,7 @@ img { display: block; }
 .choose__btn--on { border-color: var(--gold); color: var(--gold); background: rgba(217, 181, 109, 0.1); }
 .choose__or { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--muted); }
 .onboarding__card > .onboarding__body { animation: rise 0.3s both; animation-delay: 0s; display: grid; gap: 14px; }
+.onboarding__card > .error { animation: rise 0.25s both; animation-delay: 0s; margin: 0; font-size: 14px; }
 .onboarding__note { margin: 4px 0 0; }
 .socialpick { display: flex; justify-content: center; gap: 14px; padding: 6px 0 2px; }
 .socialpick__btn { display: grid; justify-items: center; gap: 7px; color: var(--muted); animation: bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.8s); transition: color 0.2s; }
@@ -669,7 +670,3 @@ img { display: block; }
 
 /* ── Reconnect ─────────────────────────────────────────────── */
 .onboarding__switch { font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 6px; }
-.input--code { text-align: center; letter-spacing: 0.35em; font-variant-numeric: tabular-nums; text-transform: uppercase; font-weight: 600; }
-.codebox { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 12px; background: var(--bg3); border: 1px dashed rgba(217, 181, 109, 0.5); color: var(--muted); }
-.codebox:active { transform: scale(0.98); }
-.codebox__code { font-family: var(--serif); font-size: 24px; font-weight: 600; letter-spacing: 0.3em; color: var(--gold); }

@@ -53,9 +53,9 @@ async function main() {
     .limit(1);
   if (feedErr) bad(`feed query (embeds): ${feedErr.message}`, "re-run supabase/schema.sql");
   else ok("feed query with guest/hearts/score embeds");
-  const { error: rpcErr } = await sb.rpc("my_recovery_code");
-  if (rpcErr) bad(`reconnect functions: ${rpcErr.message}`, "re-run supabase/schema.sql (v2.5 added guest_secrets + claim_guest) — or npm run migrate");
-  else ok("reconnect functions (guest_secrets, claim_guest)");
+  const { error: rpcErr } = await sb.rpc("claim_guest", { p_name: "__doctor__" });
+  if (rpcErr && /could not find the function/i.test(rpcErr.message)) bad(`reconnect function: ${rpcErr.message}`, "re-run supabase/schema.sql (v2.6 adds claim_guest + unique names) — or npm run migrate");
+  else ok("reconnect function (claim_guest) and unique names");
   const { error: scoresErr } = await sb.from("photo_scores").select("photo_id").limit(1);
   if (scoresErr) bad(`table photo_scores: ${scoresErr.message}`, "re-run supabase/schema.sql");
   else ok("table photo_scores");

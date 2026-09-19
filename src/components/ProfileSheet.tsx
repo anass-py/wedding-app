@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { describeError } from "../lib/errors";
 import { getTheme, setTheme, type ThemeName } from "../lib/theme";
 import { useI18n } from "../i18n";
@@ -18,30 +18,23 @@ interface Props {
   onToast: (msg: string) => void;
 }
 
-export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }: Props) {
+export function ProfileSheet({
+  api,
+  guest,
+  photos,
+  onClose,
+  onUpdated,
+  onToast,
+}: Props) {
   const { t } = useI18n();
   const [name, setName] = useState(guest.name);
   const [socials, setSocials] = useState<Socials>({ ...guest.socials });
-  const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(null);
+  const [selfie, setSelfie] = useState<{ blob: Blob; url: string } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [theme, setThemeState] = useState<ThemeName>(getTheme);
-  const [code, setCode] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    api.myRecoveryCode().then((c) => live && setCode(c));
-    return () => {
-      live = false;
-    };
-  }, [api]);
-  const copyCode = async () => {
-    if (!code) return;
-    try {
-      await navigator.clipboard.writeText(code);
-      onToast(t("copied"));
-    } catch {
-      /* clipboard unavailable */
-    }
-  };
+
   const pickTheme = (th: ThemeName) => {
     setTheme(th);
     setThemeState(th);
@@ -49,10 +42,15 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
 
   const stats = useMemo(() => {
     const mine = photos.filter((p) => p.guest_id === guest.id);
-    return { photos: mine.length, hearts: mine.reduce((n, p) => n + p.hearts, 0) };
+    return {
+      photos: mine.length,
+      hearts: mine.reduce((n, p) => n + p.hearts, 0),
+    };
   }, [photos, guest.id]);
 
-  const socialsDirty = SOCIAL_KEYS.some((k) => (socials[k] ?? "") !== (guest.socials?.[k] ?? ""));
+  const socialsDirty = SOCIAL_KEYS.some(
+    (k) => (socials[k] ?? "") !== (guest.socials?.[k] ?? ""),
+  );
   const dirty = name.trim() !== guest.name || !!selfie || socialsDirty;
 
   const save = async () => {
@@ -68,7 +66,12 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
       onToast(t("saved"));
       onClose();
     } catch (e) {
-      onToast(describeError(e));
+      const code = (e as { code?: string })?.code;
+      onToast(
+        code === "23505" || /duplicate|unique/i.test(describeError(e))
+          ? t("nameTaken")
+          : describeError(e),
+      );
     } finally {
       setBusy(false);
     }
@@ -83,10 +86,21 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         </div>
         <AvatarPicker
           label={t("changeSelfie")}
-          onPicked={(blob) => setSelfie({ blob, url: URL.createObjectURL(blob) })}
+          onPicked={(blob) =>
+            setSelfie({ blob, url: URL.createObjectURL(blob) })
+          }
           onError={onToast}
         >
-          {selfie ? <img className="avatar" style={{ width: 84, height: 84 }} src={selfie.url} alt="" /> : <Avatar guest={guest} urlFor={api.urlFor} size={84} />}
+          {selfie ? (
+            <img
+              className="avatar"
+              style={{ width: 84, height: 84 }}
+              src={selfie.url}
+              alt=""
+            />
+          ) : (
+            <Avatar guest={guest} urlFor={api.urlFor} size={84} />
+          )}
         </AvatarPicker>
         <div className="profile__stats">
           <div>
@@ -100,11 +114,17 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
         </div>
         <label className="field">
           <span>{t("yourName")}</span>
-          <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+          <input
+            className="input"
+            value={name}
+            maxLength={40}
+            onChange={(e) => setName(e.target.value)}
+          />
         </label>
         <div className="field">
           <span>
-            {t("socialsTitle")} <span className="muted">— {t("socialsHint")}</span>
+            {t("socialsTitle")}{" "}
+            <span className="muted">— {t("socialsHint")}</span>
           </span>
           <div className="socials">
             {SOCIAL_KEYS.map((k) => (
@@ -112,35 +132,36 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
                 <Icon name={SOCIAL_META[k].icon} size={18} />
                 <input
                   className="input input--slim"
-                  placeholder={k === "website" ? "monsite.com" : `@${SOCIAL_META[k].label.toLowerCase()}`}
+                  placeholder={
+                    k === "website"
+                      ? "monsite.com"
+                      : `@${SOCIAL_META[k].label.toLowerCase()}`
+                  }
                   value={socials[k] ?? ""}
                   maxLength={80}
                   autoCapitalize="none"
                   autoCorrect="off"
-                  onChange={(e) => setSocials((prev) => ({ ...prev, [k]: e.target.value }))}
+                  onChange={(e) =>
+                    setSocials((prev) => ({ ...prev, [k]: e.target.value }))
+                  }
                 />
               </label>
             ))}
           </div>
         </div>
-        {code && (
-          <div className="field">
-            <span>
-              {t("recoveryTitle")} <span className="muted">— {t("recoveryHint")}</span>
-            </span>
-            <button type="button" className="codebox" onClick={copyCode} aria-label={t("copied")}>
-              <span className="codebox__code">{code}</span>
-              <Icon name="copy" size={18} />
-            </button>
-          </div>
-        )}
         <div className="field">
           <span>{t("look")}</span>
           <div className="segmented">
-            <button className={theme === "midnight" ? "on" : ""} onClick={() => pickTheme("midnight")}>
+            <button
+              className={theme === "midnight" ? "on" : ""}
+              onClick={() => pickTheme("midnight")}
+            >
               ☾ {t("midnight")}
             </button>
-            <button className={theme === "ivory" ? "on" : ""} onClick={() => pickTheme("ivory")}>
+            <button
+              className={theme === "ivory" ? "on" : ""}
+              onClick={() => pickTheme("ivory")}
+            >
               ☀ {t("ivory")}
             </button>
           </div>
@@ -149,7 +170,11 @@ export function ProfileSheet({ api, guest, photos, onClose, onUpdated, onToast }
           <button className="btn btn--ghost" onClick={onClose}>
             {t("cancel")}
           </button>
-          <button className="btn btn--primary" onClick={save} disabled={!dirty || !name.trim() || busy}>
+          <button
+            className="btn btn--primary"
+            onClick={save}
+            disabled={!dirty || !name.trim() || busy}
+          >
             {t("save")}
           </button>
         </div>

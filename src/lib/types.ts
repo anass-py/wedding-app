@@ -60,10 +60,8 @@ export interface Api {
   updateGuest(name: string, avatar?: Blob, socials?: Socials): Promise<Guest>;
   /** Everyone who joined, oldest first (for the guest number on the card). */
   listGuests(): Promise<Guest[]>;
-  /** Re-link this device to an existing profile using the name + the code from their card. */
-  claimGuest(name: string, code: string): Promise<Guest>;
-  /** The current guest's own reconnect code. */
-  myRecoveryCode(): Promise<string | null>;
+  /** Re-link this device to the existing profile with that name. */
+  claimGuest(name: string): Promise<Guest>;
   listPhotos(): Promise<Photo[]>;
   subscribe(handlers: RealtimeHandlers): () => void;
   /** Upload a photo or a video. onProgress gets 0..1 for the transfer. */

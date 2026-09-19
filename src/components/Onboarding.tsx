@@ -18,7 +18,6 @@ export function Onboarding({ api, onJoined }: Props) {
   const [mode, setMode] = useState<"name" | "social">("name");
   const [recover, setRecover] = useState(false);
   const [rName, setRName] = useState("");
-  const [rCode, setRCode] = useState("");
   const [name, setName] = useState("");
   const [network, setNetwork] = useState<SocialKey | null>(null);
   const [handle, setHandle] = useState("");
@@ -34,11 +33,11 @@ export function Onboarding({ api, onJoined }: Props) {
     mode === "social" ? !!network && !!cleanHandle : !!name.trim();
 
   const reconnect = async () => {
-    if (!rName.trim() || rCode.trim().length < 4 || busy) return;
+    if (!rName.trim() || busy) return;
     setBusy(true);
     setError(null);
     try {
-      onJoined(await api.claimGuest(rName, rCode));
+      onJoined(await api.claimGuest(rName));
     } catch {
       setError(t("reconnectFailed"));
       setBusy(false);
@@ -65,7 +64,12 @@ export function Onboarding({ api, onJoined }: Props) {
       }
       onJoined(guest);
     } catch (e) {
-      setError(describeError(e));
+      const code = (e as { code?: string })?.code;
+      setError(
+        code === "23505" || /duplicate|unique/i.test(describeError(e))
+          ? t("nameTaken")
+          : describeError(e),
+      );
       setBusy(false);
     }
   };
@@ -121,19 +125,6 @@ export function Onboarding({ api, onJoined }: Props) {
               autoCapitalize="none"
               autoCorrect="off"
               onChange={(e) => setRName(e.target.value)}
-            />
-            <input
-              className="input input--code"
-              value={rCode}
-              placeholder={t("reconnectCode")}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="go"
-              onChange={(e) =>
-                setRCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
-              }
               onKeyDown={(e) => e.key === "Enter" && void reconnect()}
             />
           </div>
@@ -218,7 +209,7 @@ export function Onboarding({ api, onJoined }: Props) {
           <button
             className="btn btn--primary btn--block"
             onClick={reconnect}
-            disabled={!rName.trim() || rCode.length < 4 || busy}
+            disabled={!rName.trim() || busy}
           >
             {busy ? t("joining") : t("reconnect")}
           </button>
