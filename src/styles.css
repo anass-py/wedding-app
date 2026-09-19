@@ -670,3 +670,34 @@ img { display: block; }
 
 /* ── Reconnect ─────────────────────────────────────────────── */
 .onboarding__switch { font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 6px; }
+
+/* ── Guestbook ─────────────────────────────────────────────── */
+.note {
+  position: relative; display: block; width: 100%; padding: 18px 16px 12px; border-radius: 14px; text-align: left; cursor: default;
+  background: linear-gradient(160deg, var(--bg3) 0%, var(--bg2) 100%); border: 1px solid rgba(217, 181, 109, 0.22);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); overflow: hidden;
+}
+.note__quote { position: absolute; top: -6px; left: 12px; font-family: var(--serif); font-size: 64px; line-height: 1; color: rgba(217, 181, 109, 0.35); pointer-events: none; }
+.note__text { margin: 10px 0 12px; font-family: var(--serif); font-size: 17px; line-height: 1.35; font-style: italic; color: var(--text); overflow-wrap: anywhere; }
+.note__foot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.note__author { display: inline-flex; align-items: center; gap: 6px; color: inherit; flex: 1; min-width: 0; text-align: left; }
+.note__delete { margin-left: 4px; color: var(--muted); opacity: 0.7; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.note__delete:active { background: var(--bg3); }
+.card__name { display: inline-flex; align-items: center; gap: 4px; }
+.rolebadge { display: inline-grid; place-items: center; color: var(--gold); }
+.viewer__name .rolebadge { margin-left: 6px; vertical-align: -2px; }
+.gcard__edition--gold { color: var(--gold); }
+
+.compose { display: grid; gap: 10px; }
+.compose__to { margin: 0; font-family: var(--serif); font-size: 20px; }
+.compose__text { resize: none; line-height: 1.4; font-family: var(--serif); font-size: 18px; min-height: 120px; }
+.compose__meta { text-align: right; }
+
+.celebrate__note { width: min(78vw, 340px); aspect-ratio: auto; padding: 26px 22px 18px; display: grid; }
+.celebrate__note .note__text { font-size: 20px; margin: 8px 0 0; }
+.celebrate__note .note__quote { top: 0; }
+
+.tv__note { max-width: 60vw; padding: 5vh 5vw 4vh; border-radius: 2vw; position: relative; background: rgba(20, 17, 14, 0.7); border: 1px solid rgba(217, 181, 109, 0.4); backdrop-filter: blur(20px); animation: tvin 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tv__note .note__quote { font-size: 10vw; top: -2vh; left: 2vw; }
+.tv__note-text { margin: 2vh 0 3vh; font-family: var(--serif); font-style: italic; font-size: 2.6vw; line-height: 1.35; color: #f4ede3; }
+.tv__note-by { display: flex; align-items: center; gap: 1vw; font-family: var(--serif); font-size: 1.8vw; color: var(--gold); }

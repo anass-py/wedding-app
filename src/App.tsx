@@ -12,12 +12,13 @@ import { SkeletonGrid } from "./components/Skeleton";
 import { TopPhotos } from "./components/TopPhotos";
 import { UploadSheet } from "./components/UploadSheet";
 import { Welcome } from "./components/Welcome";
+import { useMessages } from "./hooks/useMessages";
 import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { describeError, isSchemaOutOfDate } from "./lib/errors";
 import { topPhotos } from "./lib/ranking";
-import type { Guest, Photo } from "./lib/types";
+import type { Guest, Message, Photo, WallItem } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
@@ -43,6 +44,12 @@ export default function App() {
   const [pulse, setPulse] = useState<{ key: number; photoId: string } | null>(null);
   const onRemoteHeart = useCallback((photoId: string) => setPulse({ key: Date.now() + Math.random(), photoId }), []);
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
+  const { messages, addMessage, toggleMessageHeart, removeMessage } = useMessages(api, stage === "ready");
+  const wall = useMemo<WallItem[]>(
+    () => [...photos, ...messages].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    [photos, messages],
+  );
+  const [celebratingMessage, setCelebratingMessage] = useState<Message | null>(null);
 
   useEffect(() => {
     api
@@ -133,6 +140,7 @@ export default function App() {
         <div className="header__sub">
           {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
           {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
+          {messages.length > 0 && ` · ${messages.length === 1 ? t("messageOne") : t("messagesCount", { n: messages.length })}`}
         </div>
         <button className="langtoggle header__lang" onClick={() => setLang(lang === "fr" ? "en" : "fr")} aria-label={t("language")}>
           <span className={lang === "fr" ? "on" : ""}>FR</span>
@@ -156,13 +164,17 @@ export default function App() {
               <SkeletonGrid />
             ) : (
               <Masonry
-                photos={photos}
+                photos={wall}
                 urlFor={api.urlFor}
                 onSelect={(p) => setSelectedId(p.id)}
                 highlight={topIds}
                 resetKey={wallReset}
                 pulse={pulse}
                 onHeart={toggleHeart}
+                onHeartMessage={toggleMessageHeart}
+                onDeleteMessage={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
+                meId={guest?.id ?? null}
+                onOpenGuest={setGuestCard}
               />
             )}
             {!loading && photos.length === 0 && (
@@ -204,6 +216,7 @@ export default function App() {
           onHeart={toggleHeart}
           onDelete={removePhoto}
           onOpenGuest={setGuestCard}
+          onToast={showToast}
         />
       )}
       {guestCard && <GuestCard guest={guestCard} photos={photos} api={api} onClose={() => setGuestCard(null)} />}
@@ -213,9 +226,22 @@ export default function App() {
           onClose={() => setUploadOpen(false)}
           onError={showToast}
           onDone={(batch) => setCelebrating(batch)}
+          onMessage={(m) => setCelebratingMessage(m)}
         />
       )}
       {celebrating && <Celebration photos={celebrating} urlFor={api.urlFor} onDone={finishCelebration} />}
+      {celebratingMessage && (
+        <Celebration
+          message={celebratingMessage}
+          urlFor={api.urlFor}
+          onDone={() => {
+            addMessage(celebratingMessage);
+            setCelebratingMessage(null);
+            setTab("wall");
+            setWallReset((k) => k + 1);
+          }}
+        />
+      )}
       {welcome && guest && <Welcome name={guest.name} onDone={() => setWelcome(false)} />}
       {profileOpen && guest && (
         <ProfileSheet

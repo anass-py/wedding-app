@@ -235,5 +235,56 @@ begin
 end $$;
 grant execute on function dev.claim_guest(text) to authenticated;
 
+-- ── v2.8: livre d'or (messages to the couple) ────────────────────────────────
+create table if not exists dev.messages (
+  id         uuid primary key default gen_random_uuid(),
+  guest_id   uuid not null references dev.guests(id) on delete cascade,
+  text       text not null check (char_length(btrim(text)) between 1 and 280),
+  created_at timestamptz not null default now()
+);
+create index if not exists messages_created_at_idx on dev.messages (created_at desc);
+
+create table if not exists dev.message_hearts (
+  message_id uuid not null references dev.messages(id) on delete cascade,
+  guest_id   uuid not null references dev.guests(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (message_id, guest_id)
+);
+
+alter table dev.messages       enable row level security;
+alter table dev.message_hearts enable row level security;
+drop policy if exists "messages: read all"   on dev.messages;
+drop policy if exists "messages: insert own" on dev.messages;
+drop policy if exists "messages: delete own" on dev.messages;
+drop policy if exists "mhearts: read all"    on dev.message_hearts;
+drop policy if exists "mhearts: insert own"  on dev.message_hearts;
+drop policy if exists "mhearts: delete own"  on dev.message_hearts;
+create policy "messages: read all"   on dev.messages for select to authenticated using (true);
+create policy "messages: insert own" on dev.messages for insert to authenticated with check (guest_id = dev.current_guest_id());
+create policy "messages: delete own" on dev.messages for delete to authenticated using (guest_id = dev.current_guest_id());
+create policy "mhearts: read all"    on dev.message_hearts for select to authenticated using (true);
+create policy "mhearts: insert own"  on dev.message_hearts for insert to authenticated with check (guest_id = dev.current_guest_id());
+create policy "mhearts: delete own"  on dev.message_hearts for delete to authenticated using (guest_id = dev.current_guest_id());
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'dev' and tablename = 'messages') then
+    alter publication supabase_realtime add table dev.messages;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'dev' and tablename = 'message_hearts') then
+    alter publication supabase_realtime add table dev.message_hearts;
+  end if;
+end $$;
+
+-- ── Migrations without copy/paste ───────────────────────────────────────────
+-- Lets `npm run migrate` apply this file with the service-role key (never exposed to guests).
+create or replace function dev.exec_sql(sql text) returns void
+language plpgsql security definer set search_path = dev as $$
+begin
+  execute sql;
+end $$;
+revoke all on function dev.exec_sql(text) from public, anon, authenticated;
+grant execute on function dev.exec_sql(text) to service_role;
+
 grant all on all tables in schema dev to anon, authenticated, service_role;
 grant all on all functions in schema dev to anon, authenticated, service_role;

@@ -2,7 +2,7 @@ import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
 import { processImage } from "./image";
 import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
-import type { Api, Guest, Photo, RealtimeHandlers, Score, Socials } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials } from "./types";
 
 /**
  * Production talks to the `public` tables and the `photos` bucket. Set VITE_DB_SCHEMA=dev and
@@ -42,6 +42,16 @@ interface GuestRow {
 const GUEST_SELECT = "id, name, avatar_path, socials";
 function toGuest(g: GuestRow): Guest {
   return { id: g.id, name: g.name, avatar_path: g.avatar_path, socials: g.socials ?? {}, created_at: g.created_at };
+}
+
+const MESSAGE_SELECT = "id, guest_id, text, created_at, guest:guests!messages_guest_id_fkey(id, name, avatar_path, socials), message_hearts(guest_id)";
+interface MessageRow {
+  id: string;
+  guest_id: string;
+  text: string;
+  created_at: string;
+  guest: GuestRow | GuestRow[] | null;
+  message_hearts: { guest_id: string }[] | null;
 }
 
 interface ScoreRow {
@@ -96,6 +106,26 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
    * data reset the phone may hold a session for a deleted user, which would make every
    * insert fail with a foreign-key error. In that case start over with a new one.
    */
+  function toMessage(r: MessageRow): Message {
+    const hearts = r.message_hearts ?? [];
+    return {
+      kind: "message",
+      id: r.id,
+      guest_id: r.guest_id,
+      text: r.text,
+      created_at: r.created_at,
+      guest: toGuest(one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null }),
+      hearts: hearts.length,
+      hearted: !!guest && hearts.some((h) => h.guest_id === guest!.id),
+    };
+  }
+
+  async function fetchMessage(id: string): Promise<Message | null> {
+    const { data, error } = await sb.from("messages").select(MESSAGE_SELECT).eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? toMessage(data as unknown as MessageRow) : null;
+  }
+
   async function ensureSession() {
     const { data } = await sb.auth.getSession();
     if (data.session) {
@@ -247,6 +277,21 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
           const r = p.old as { photo_id: string; guest_id: string };
           h.onHeart(r.photo_id, r.guest_id, -1);
         })
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "messages" }, async (p) => {
+          const m = await fetchMessage((p.new as { id: string }).id).catch(() => null);
+          if (m) h.onMessageInsert?.(m);
+        })
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "messages" }, (p) => {
+          h.onMessageDelete?.((p.old as { id: string }).id);
+        })
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "message_hearts" }, (p) => {
+          const r = p.new as { message_id: string; guest_id: string };
+          h.onMessageHeart?.(r.message_id, r.guest_id, 1);
+        })
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "message_hearts" }, (p) => {
+          const r = p.old as { message_id: string; guest_id: string };
+          h.onMessageHeart?.(r.message_id, r.guest_id, -1);
+        })
         .on("postgres_changes", { event: "*", schema: SCHEMA, table: "photo_scores" }, (p) => {
           const r = p.new as ScoreRow & { photo_id?: string };
           const s = toScore(r);
@@ -307,6 +352,37 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     urlFor(path) {
       return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    },
+
+    async listMessages() {
+      const { data, error } = await sb.from("messages").select(MESSAGE_SELECT).order("created_at", { ascending: false }).limit(1000);
+      if (error) throw error;
+      return (data as unknown as MessageRow[]).map(toMessage);
+    },
+
+    async postMessage(text) {
+      if (!guest) throw new Error("Not registered");
+      const { data, error } = await sb.from("messages").insert({ guest_id: guest.id, text: text.trim() }).select("id").single();
+      if (error) throw error;
+      const m = await fetchMessage(data.id);
+      if (!m) throw new Error("Message vanished after insert");
+      return m;
+    },
+
+    async setMessageHeart(messageId, hearted) {
+      if (!guest) throw new Error("Not registered");
+      if (hearted) {
+        const { error } = await sb.from("message_hearts").upsert({ message_id: messageId, guest_id: guest.id }, { onConflict: "message_id,guest_id", ignoreDuplicates: true });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from("message_hearts").delete().eq("message_id", messageId).eq("guest_id", guest.id);
+        if (error) throw error;
+      }
+    },
+
+    async deleteMessage(id) {
+      const { error } = await sb.from("messages").delete().eq("id", id);
+      if (error) throw error;
     },
   };
   return api;

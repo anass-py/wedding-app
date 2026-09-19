@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { WEDDING } from "../config";
+import { WEDDING, roleOf } from "../config";
 import { useI18n } from "../i18n";
 import { topPhotos } from "../lib/ranking";
 import { SOCIAL_KEYS, SOCIAL_META, socialLabel, socialUrl } from "../lib/socials";
@@ -55,13 +55,15 @@ export function GuestCard({ guest, photos, api, onClose }: Props) {
   const socials = SOCIAL_KEYS.filter((k) => guest.socials?.[k]);
   const handle = SOCIAL_KEYS.filter((k) => k !== "website").map((k) => guest.socials?.[k]).find(Boolean) ?? null;
   const pad = (n: number) => String(n).padStart(2, "0");
+  const role = roleOf(guest.name);
+  const title = role === "guest" ? WEDDING.guestTitle : t(role);
 
   return (
     <div className="gcard-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="gcard" onClick={(e) => e.stopPropagation()}>
         <div className="gcard__head">
           <span className="gcard__brand">{WEDDING.couple}</span>
-          <span className="gcard__edition">{WEDDING.guestTitle}</span>
+          <span className={"gcard__edition" + (role !== "guest" ? " gcard__edition--gold" : "")}>{title}</span>
         </div>
 
         <div className="gcard__numrow">
@@ -97,7 +99,7 @@ export function GuestCard({ guest, photos, api, onClose }: Props) {
           {stats.inTop ? (
             <span className="gcard__chip gcard__chip--gold">★ TOP 5</span>
           ) : (
-            <span className="gcard__chip">{WEDDING.guestTitle.toUpperCase()}</span>
+            <span className={"gcard__chip" + (role !== "guest" ? " gcard__chip--gold" : "")}>{title.toUpperCase()}</span>
           )}
         </div>
 

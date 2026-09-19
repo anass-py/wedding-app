@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../i18n";
-import type { Photo } from "../lib/types";
+import type { Message, Photo } from "../lib/types";
 
 interface Props {
-  photos: Photo[];
+  photos?: Photo[];
+  message?: Message;
   urlFor: (path: string) => string;
   onDone: () => void;
 }
@@ -12,7 +13,7 @@ const HOLD_MS = 2300;
 const OUT_MS = 550;
 
 /** Full-screen "Posted!" moment: photo springs in, sparks burst, then it flies to the wall. */
-export function Celebration({ photos, urlFor, onDone }: Props) {
+export function Celebration({ photos = [], message, urlFor, onDone }: Props) {
   const { t } = useI18n();
   const [phase, setPhase] = useState<"in" | "out">("in");
 
@@ -44,7 +45,7 @@ export function Celebration({ photos, urlFor, onDone }: Props) {
   };
 
   const hero = photos[0];
-  const portrait = hero.width && hero.height ? hero.height >= hero.width : true;
+  const portrait = hero?.width && hero?.height ? hero.height >= hero.width : true;
 
   return (
     <div className={`celebrate celebrate--${phase}`} onClick={skip} role="status">
@@ -63,13 +64,22 @@ export function Celebration({ photos, urlFor, onDone }: Props) {
             />
           ))}
         </div>
-        <div className={"celebrate__photo" + (portrait ? "" : " celebrate__photo--wide")}>
-          <img src={urlFor(hero.thumb_path)} alt="" draggable={false} />
-          {photos.length > 1 && <span className="celebrate__count">+{photos.length - 1}</span>}
-        </div>
+        {message ? (
+          <div className="celebrate__photo celebrate__note">
+            <span className="note__quote" aria-hidden="true">
+              “
+            </span>
+            <p className="note__text">{message.text}</p>
+          </div>
+        ) : (
+          <div className={"celebrate__photo" + (portrait ? "" : " celebrate__photo--wide")}>
+            <img src={urlFor(hero.thumb_path)} alt="" draggable={false} />
+            {photos.length > 1 && <span className="celebrate__count">+{photos.length - 1}</span>}
+          </div>
+        )}
       </div>
-      <h2 className="celebrate__title">{t("posted")}</h2>
-      <p className="celebrate__sub">{photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}</p>
+      <h2 className="celebrate__title">{message ? t("messageSent") : t("posted")}</h2>
+      <p className="celebrate__sub">{message ? t("messageCelebrate") : photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}</p>
     </div>
   );
 }

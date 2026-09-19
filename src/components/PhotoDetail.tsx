@@ -5,6 +5,7 @@ import { buzz } from "../lib/haptics";
 import type { Api, Photo } from "../lib/types";
 import { formatDuration } from "../lib/video";
 import { Avatar } from "./Avatar";
+import { RoleBadge } from "./RoleBadge";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   onHeart: (photo: Photo) => void;
   onDelete: (photo: Photo) => Promise<void>;
   onOpenGuest: (guest: Photo["guest"]) => void;
+  onToast?: (msg: string) => void;
 }
 
 const SWIPE_PX = 70;
@@ -34,7 +36,7 @@ interface Pt {
  * overlaid. Swipe ←/→ between items, swipe ↓ to close, tap = play/pause (video) or
  * hide/show the overlay (photo), double-tap = ❤️, pinch = zoom (photo).
  */
-export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete, onOpenGuest }: Props) {
+export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, onDelete, onOpenGuest, onToast }: Props) {
   const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [likeAnim, setLikeAnim] = useState<{ photoId: string; n: number } | null>(null);
@@ -50,6 +52,7 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   const [fill, setFill] = useState(true); // portrait media fills the screen; ⤢ shows the whole frame
 
   const slideRef = useRef<HTMLDivElement>(null);
+  const blobCache = useRef(new Map<string, Blob>());
   const mediaRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pointers = useRef(new Map<number, Pt>());
@@ -90,6 +93,25 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // Fetch the current file in the background so "Save" can hand it to the share sheet
+  // immediately on the tap (iOS refuses to open it after an async wait).
+  useEffect(() => {
+    const id = photo.id;
+    if (blobCache.current.has(id)) return;
+    let live = true;
+    fetch(api.urlFor(photo.path))
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+      .then((b) => {
+        if (!live) return;
+        if (blobCache.current.size > 6) blobCache.current.delete(blobCache.current.keys().next().value!);
+        blobCache.current.set(id, b);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [photo.id, photo.path, api]);
 
   // Preload neighbours so swiping feels instant.
   useEffect(() => {
@@ -264,31 +286,56 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
   useEffect(() => () => window.clearTimeout(singleTap.current), []);
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const save = async () => {
+  const fileName = () => {
+    const ext = isVideo ? (photo.path.match(/\.(\w+)$/)?.[1] ?? "mp4") : "jpg";
+    return `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.${ext}`;
+  };
+  const downloadBlob = (blob: Blob) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName();
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    onToast?.(t("saved"));
+  };
+  const openForLongPress = () => {
+    window.open(fullUrl, "_blank", "noopener");
+    onToast?.(t("saveHint"));
+  };
+
+  const save = () => {
     if (saving) return;
-    setSaving(true);
-    try {
-      const blob = await (await fetch(fullUrl)).blob();
-      const ext = isVideo ? (photo.path.match(/\.(\w+)$/)?.[1] ?? "mp4") : "jpg";
-      const name = `${WEDDING.couple.replace(/[^\p{L}\p{N}]+/gu, "-")}-${photo.id.slice(0, 8)}.${ext}`;
-      const file = new File([blob], name, { type: blob.type || (isVideo ? "video/mp4" : "image/jpeg") });
-      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: WEDDING.couple });
-      } else {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = name;
-        a.rel = "noopener";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      }
-    } catch {
-      /* cancelled or blocked */
-    } finally {
-      setSaving(false);
+    const cached = blobCache.current.get(photo.id);
+    const shareable = (blob: Blob) => {
+      const file = new File([blob], fileName(), { type: blob.type || (isVideo ? "video/mp4" : "image/jpeg") });
+      return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] }) ? file : null;
+    };
+    if (cached) {
+      const file = shareable(cached);
+      if (file) {
+        // Synchronous within the tap → allowed everywhere, incl. iOS ("Save Image" is in the sheet).
+        navigator.share({ files: [file], title: WEDDING.couple }).catch((e: unknown) => {
+          if (!(e instanceof DOMException && e.name === "AbortError")) openForLongPress();
+        });
+      } else downloadBlob(cached);
+      return;
     }
+    setSaving(true);
+    fetch(fullUrl)
+      .then((r) => r.blob())
+      .then((blob) => {
+        blobCache.current.set(photo.id, blob);
+        const file = shareable(blob);
+        if (!file) return downloadBlob(blob);
+        return navigator.share({ files: [file], title: WEDDING.couple }).catch((e: unknown) => {
+          if (!(e instanceof DOMException && e.name === "AbortError")) openForLongPress();
+        });
+      })
+      .catch(openForLongPress)
+      .finally(() => setSaving(false));
   };
 
   const remove = async () => {
@@ -378,7 +425,10 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
           <button className="viewer__who" onClick={() => onOpenGuest(photo.guest)} aria-label={photo.guest.name}>
             <Avatar guest={photo.guest} urlFor={api.urlFor} size={40} />
             <span className="viewer__meta">
-              <span className="viewer__name">{photo.guest.name}</span>
+              <span className="viewer__name">
+                {photo.guest.name}
+                <RoleBadge name={photo.guest.name} size={16} />
+              </span>
               <span className="viewer__time">
                 {relativeTime(photo.created_at, t)}
                 {isVideo && ` · ${formatDuration(photo.duration)}`}

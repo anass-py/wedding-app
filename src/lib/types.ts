@@ -41,12 +41,29 @@ export interface Photo {
   score: Score | null;
 }
 
+export interface Message {
+  kind: "message";
+  id: string;
+  guest_id: string;
+  text: string;
+  created_at: string;
+  guest: Guest;
+  hearts: number;
+  hearted: boolean;
+}
+
+/** What the wall shows: photos, videos and guestbook messages, newest first. */
+export type WallItem = Photo | Message;
+
 export interface RealtimeHandlers {
   onPhotoInsert: (photo: Photo) => void;
   onPhotoDelete: (id: string) => void;
   /** delta is +1 or -1; guestId lets the UI ignore its own optimistic updates. */
   onHeart: (photoId: string, guestId: string, delta: 1 | -1) => void;
   onScore: (photoId: string, score: Score) => void;
+  onMessageInsert?: (message: Message) => void;
+  onMessageDelete?: (id: string) => void;
+  onMessageHeart?: (messageId: string, guestId: string, delta: 1 | -1) => void;
 }
 
 export interface Api {
@@ -69,4 +86,8 @@ export interface Api {
   setHeart(photoId: string, hearted: boolean): Promise<void>;
   deletePhoto(photo: Photo): Promise<void>;
   urlFor(path: string): string;
+  listMessages(): Promise<Message[]>;
+  postMessage(text: string): Promise<Message>;
+  setMessageHeart(messageId: string, hearted: boolean): Promise<void>;
+  deleteMessage(id: string): Promise<void>;
 }

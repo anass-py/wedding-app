@@ -6,7 +6,7 @@ import { THEMES } from "../config";
 import { processImage } from "./image";
 import { uid } from "./uid";
 import { isVideoFile, processVideo } from "./video";
-import type { Api, Guest, Photo, RealtimeHandlers } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers } from "./types";
 
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
 const EMOJI = ["💍", "💐", "🥂", "💃", "🎂", "🕺", "✨", "🌹", "🎶", "📸", "🍽️", "🎉"];
@@ -51,6 +51,21 @@ export function createDemoApi(): Api {
   const urls = new Map<string, string>();
   let photos: Photo[] = [];
   let handlers: RealtimeHandlers | null = null;
+  const WISHES = [
+    "Que votre histoire soit longue, drôle et pleine de voyages. On vous aime !",
+    "Anass, tu as gagné le gros lot. Boutaina, bon courage 😄",
+    "La plus belle soirée de l’année. Merci pour tout.",
+  ];
+  let messages: Message[] = WISHES.map((text, i) => ({
+    kind: "message",
+    id: `msg-${i}`,
+    guest_id: guests[(i + 2) % guests.length].id,
+    text,
+    created_at: new Date(Date.now() - (i * 9 + 5) * 60_000).toISOString(),
+    guest: guests[(i + 2) % guests.length],
+    hearts: (i * 3) % 7,
+    hearted: false,
+  }));
 
   const count = 34;
   for (let i = 0; i < count; i++) {
@@ -221,6 +236,25 @@ export function createDemoApi(): Api {
     },
     urlFor(path) {
       return urls.get(path) ?? "";
+    },
+    async listMessages() {
+      return messages.map((m) => ({ ...m }));
+    },
+    async postMessage(text) {
+      if (!me) throw new Error("Not registered");
+      const m: Message = { kind: "message", id: uid(), guest_id: me.id, text: text.trim(), created_at: new Date().toISOString(), guest: me, hearts: 0, hearted: false };
+      messages = [m, ...messages];
+      return m;
+    },
+    async setMessageHeart(id, hearted) {
+      const m = messages.find((x) => x.id === id);
+      if (m) {
+        m.hearted = hearted;
+        m.hearts += hearted ? 1 : -1;
+      }
+    },
+    async deleteMessage(id) {
+      messages = messages.filter((m) => m.id !== id);
     },
   };
 }

@@ -18,7 +18,18 @@ export const WEDDING = {
    * Ideas: "Complice", "Témoin", "Paparazzi", "Conteur".
    */
   guestTitle: "Complice",
+  /** The guest names (case-insensitive) that are the groom and the bride. */
+  groom: "voligle",
+  bride: "Boutaina",
 };
+
+export type Role = "groom" | "bride" | "guest";
+export function roleOf(name: string): Role {
+  const n = name.trim().toLowerCase();
+  if (n === WEDDING.groom.trim().toLowerCase()) return "groom";
+  if (n === WEDDING.bride.trim().toLowerCase()) return "bride";
+  return "guest";
+}
 
 /** Themes used by the AI ranking. Keep in sync with scripts/rank.ts THEMES. */
 export const THEMES = [
