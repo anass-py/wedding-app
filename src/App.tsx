@@ -3,6 +3,7 @@ import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
 import { GuestCard } from "./components/GuestCard";
+import { Guestbook } from "./components/Guestbook";
 import { Icon } from "./components/Icon";
 import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
@@ -18,7 +19,7 @@ import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { describeError, isSchemaOutOfDate } from "./lib/errors";
 import { topPhotos } from "./lib/ranking";
-import type { Guest, Message, Photo, WallItem } from "./lib/types";
+import type { Guest, Message, Photo } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "top";
@@ -45,10 +46,6 @@ export default function App() {
   const onRemoteHeart = useCallback((photoId: string) => setPulse({ key: Date.now() + Math.random(), photoId }), []);
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
   const { messages, addMessage, toggleMessageHeart, removeMessage } = useMessages(api, stage === "ready");
-  const wall = useMemo<WallItem[]>(
-    () => [...photos, ...messages].sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [photos, messages],
-  );
   const [celebratingMessage, setCelebratingMessage] = useState<Message | null>(null);
 
   useEffect(() => {
@@ -163,19 +160,42 @@ export default function App() {
             {loading && photos.length === 0 ? (
               <SkeletonGrid />
             ) : (
-              <Masonry
-                photos={wall}
-                urlFor={api.urlFor}
-                onSelect={(p) => setSelectedId(p.id)}
-                highlight={topIds}
-                resetKey={wallReset}
-                pulse={pulse}
-                onHeart={toggleHeart}
-                onHeartMessage={toggleMessageHeart}
-                onDeleteMessage={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
-                meId={guest?.id ?? null}
-                onOpenGuest={setGuestCard}
-              />
+              <div className="wall">
+                <Guestbook
+                  layout="column"
+                  messages={messages}
+                  urlFor={api.urlFor}
+                  meId={guest?.id ?? null}
+                  onHeart={toggleMessageHeart}
+                  onDelete={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
+                  onOpenGuest={setGuestCard}
+                />
+                <div className="wall__divider" aria-hidden="true">
+                  <span>✦</span>
+                </div>
+                <div className="wall__photos">
+                  <Masonry
+                    photos={photos}
+                    urlFor={api.urlFor}
+                    onSelect={(p) => setSelectedId(p.id)}
+                    highlight={topIds}
+                    resetKey={wallReset}
+                    pulse={pulse}
+                    onHeart={toggleHeart}
+                    top={
+                      <Guestbook
+                        layout="strip"
+                        messages={messages}
+                        urlFor={api.urlFor}
+                        meId={guest?.id ?? null}
+                        onHeart={toggleMessageHeart}
+                        onDelete={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
+                        onOpenGuest={setGuestCard}
+                      />
+                    }
+                  />
+                </div>
+              </div>
             )}
             {!loading && photos.length === 0 && (
               <div className="empty">

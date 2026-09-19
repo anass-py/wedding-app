@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "../i18n";
-import type { Message, Photo, WallItem } from "../lib/types";
+import type { Photo } from "../lib/types";
 import { RoleBadge } from "./RoleBadge";
 import { formatDuration } from "../lib/video";
 import { buzz } from "../lib/haptics";
@@ -8,7 +8,7 @@ import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 
 interface Props {
-  photos: WallItem[];
+  photos: Photo[];
   urlFor: (path: string) => string;
   onSelect: (photo: Photo) => void;
   /** Photo ids to mark with a gold star (the current top 5). */
@@ -19,12 +19,8 @@ interface Props {
   pulse?: { key: number; photoId: string } | null;
   /** Double-tap on a card hearts it (never un-hearts). */
   onHeart?: (photo: Photo) => void;
-  onHeartMessage?: (message: Message) => void;
-  onDeleteMessage?: (message: Message) => void;
-  /** The current guest's id, to show the delete control on their own messages. */
-  meId?: string | null;
-  /** Tap the author of a message → their card. */
-  onOpenGuest?: (guest: Message["guest"]) => void;
+  /** Rendered inside the scroll area above the columns (the guestbook strip on phones). */
+  top?: ReactNode;
 }
 
 const DOUBLE_TAP_MS = 280;
@@ -40,25 +36,29 @@ function ratio(p: Photo): number {
   return Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
 }
 
-/** Rough card height of a message in column-width units (for the column packing). */
-function messageHeight(m: Message): number {
-  return 0.55 + Math.min(1.2, m.text.length / 140) * 0.6;
-}
-
 /** Greedy shortest-column packing, like Pinterest. Heights are in column-width units. */
-function distribute(items: WallItem[], cols: number): WallItem[][] {
-  const columns: WallItem[][] = Array.from({ length: cols }, () => []);
+function distribute(photos: Photo[], cols: number): Photo[][] {
+  const columns: Photo[][] = Array.from({ length: cols }, () => []);
   const heights = new Array<number>(cols).fill(0);
-  for (const it of items) {
+  for (const p of photos) {
     let c = 0;
     for (let i = 1; i < cols; i++) if (heights[i] < heights[c] - 0.01) c = i;
-    columns[c].push(it);
-    heights[c] += it.kind === "message" ? messageHeight(it) : ratio(it) + (it.caption ? 0.36 : 0.22);
+    columns[c].push(p);
+    heights[c] += ratio(p) + (p.caption ? 0.36 : 0.22);
   }
   return columns;
 }
 
-export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, onHeart, onHeartMessage, onDeleteMessage, meId, onOpenGuest }: Props) {
+export function Masonry({
+  photos,
+  urlFor,
+  onSelect,
+  highlight,
+  resetKey,
+  pulse,
+  onHeart,
+  top,
+}: Props) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(2);
@@ -66,13 +66,18 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
   // Photos arriving while the guest is scrolled down are held back behind a
   // "N new" pill, so the grid never jumps under their thumb.
   const [shownIds, setShownIds] = useState<Set<string> | null>(null);
-  const shown = useMemo(() => (shownIds ? photos.filter((p) => shownIds.has(p.id)) : photos), [photos, shownIds]);
+  const shown = useMemo(
+    () => (shownIds ? photos.filter((p) => shownIds.has(p.id)) : photos),
+    [photos, shownIds],
+  );
   const pending = photos.length - shown.length;
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setCols(Math.max(2, Math.floor(el.clientWidth / MIN_COLUMN_WIDTH))));
+    const ro = new ResizeObserver(() =>
+      setCols(Math.max(2, Math.floor(el.clientWidth / MIN_COLUMN_WIDTH))),
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -82,7 +87,8 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
     if (!el) return;
     // Freeze the visible set as soon as the user scrolls away from the top.
     const onScroll = () => {
-      if (el.scrollTop > 120) setShownIds((s) => s ?? new Set(photos.map((p) => p.id)));
+      if (el.scrollTop > 120)
+        setShownIds((s) => s ?? new Set(photos.map((p) => p.id)));
       else setShownIds(null);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -128,32 +134,42 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
   useEffect(() => {
     if (!pulse) return;
     setFloats((f) => [...f, pulse]);
-    const id = window.setTimeout(() => setFloats((f) => f.filter((x) => x.key !== pulse.key)), 1400);
+    const id = window.setTimeout(
+      () => setFloats((f) => f.filter((x) => x.key !== pulse.key)),
+      1400,
+    );
     return () => window.clearTimeout(id);
   }, [pulse]);
 
   // Single tap opens (after a short wait), double tap hearts with a big ♥ on the card.
   const lastTap = useRef<{ id: string; t: number } | null>(null);
   const pendingOpen = useRef(0);
-  const [likeFlash, setLikeFlash] = useState<{ photoId: string; key: number } | null>(null);
-  const onCardClick = (it: WallItem) => {
+  const [likeFlash, setLikeFlash] = useState<{
+    photoId: string;
+    key: number;
+  } | null>(null);
+  const onCardClick = (p: Photo) => {
     const now = performance.now();
-    const isDouble = lastTap.current?.id === it.id && now - lastTap.current.t < DOUBLE_TAP_MS;
-    if (isDouble) {
+    if (
+      onHeart &&
+      lastTap.current?.id === p.id &&
+      now - lastTap.current.t < DOUBLE_TAP_MS
+    ) {
       window.clearTimeout(pendingOpen.current);
       lastTap.current = null;
-      setLikeFlash({ photoId: it.id, key: now });
-      if (!it.hearted) {
-        if (it.kind === "message") onHeartMessage?.(it);
-        else onHeart?.(it);
+      setLikeFlash({ photoId: p.id, key: now });
+      if (!p.hearted) {
+        onHeart(p);
         buzz();
       }
       return;
     }
-    lastTap.current = { id: it.id, t: now };
+    lastTap.current = { id: p.id, t: now };
     window.clearTimeout(pendingOpen.current);
-    if (it.kind === "message") return; // single tap does nothing on a message; double-tap hearts it
-    pendingOpen.current = window.setTimeout(() => onSelect(it), onHeart ? DOUBLE_TAP_MS : 0);
+    pendingOpen.current = window.setTimeout(
+      () => onSelect(p),
+      onHeart ? DOUBLE_TAP_MS : 0,
+    );
   };
   useEffect(() => () => window.clearTimeout(pendingOpen.current), []);
 
@@ -167,75 +183,40 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
         </button>
       )}
       <div ref={scrollRef} className="masonry">
-        {columns.map((col, i) => (
-          <div key={i} className="masonry__col">
-            {col.map((it, j) =>
-              it.kind === "message" ? (
-                <div
-                  key={it.id}
-                  className={"card note" + (isNew(it.id) ? " card--new" : "")}
-                  style={firstPaint ? { animationDelay: `${Math.min(j, 8) * 70 + i * 35}ms` } : undefined}
-                  onClick={() => onCardClick(it)}
-                  role="article"
-                >
-                  <span className="note__quote" aria-hidden="true">
-                    “
-                  </span>
-                  <p className="note__text">{it.text}</p>
-                  <span className="note__foot">
-                    <button
-                      className="note__author"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenGuest?.(it.guest);
-                      }}
-                    >
-                      <Avatar guest={it.guest} urlFor={urlFor} size={20} />
-                      <span className="card__name">
-                        {it.guest.name}
-                        <RoleBadge name={it.guest.name} size={12} />
-                      </span>
-                    </button>
-                    {it.hearts > 0 && (
-                      <span className={"card__hearts" + (it.hearted ? " card__hearts--on" : "")}>
-                        <Icon name="heart" size={12} fill={it.hearted} /> {it.hearts}
-                      </span>
-                    )}
-                    {meId && it.guest_id === meId && onDeleteMessage && (
-                      <button
-                        className="note__delete"
-                        aria-label="Delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteMessage(it);
-                        }}
-                      >
-                        <Icon name="trash" size={13} />
-                      </button>
-                    )}
-                  </span>
-                  {likeFlash?.photoId === it.id && (
-                    <span key={likeFlash.key} className="bigheart bigheart--card" aria-hidden="true">
-                      ♥
-                    </span>
-                  )}
-                </div>
-              ) : (
+        {top}
+        <div className="masonry__cols">
+          {columns.map((col, i) => (
+            <div key={i} className="masonry__col">
+              {col.map((it, j) => (
                 <button
                   key={it.id}
                   className={"card" + (isNew(it.id) ? " card--new" : "")}
-                  style={firstPaint ? { animationDelay: `${Math.min(j, 8) * 70 + i * 35}ms` } : undefined}
+                  style={
+                    firstPaint
+                      ? { animationDelay: `${Math.min(j, 8) * 70 + i * 35}ms` }
+                      : undefined
+                  }
                   onClick={() => onCardClick(it)}
                 >
-                  <span className="card__img" style={{ aspectRatio: `1 / ${ratio(it)}` }}>
+                  <span
+                    className="card__img"
+                    style={{ aspectRatio: `1 / ${ratio(it)}` }}
+                  >
                     {it.kind === "video" ? (
-                      <AutoVideo src={urlFor(it.path)} poster={urlFor(it.thumb_path)} />
+                      <AutoVideo
+                        src={urlFor(it.path)}
+                        poster={urlFor(it.thumb_path)}
+                      />
                     ) : (
-                      <FadeImg src={urlFor(it.thumb_path)} alt={it.caption ?? ""} />
+                      <FadeImg
+                        src={urlFor(it.thumb_path)}
+                        alt={it.caption ?? ""}
+                      />
                     )}
                     {it.kind === "video" && (
                       <span className="card__video">
-                        <Icon name="play" size={11} fill strokeWidth={0} /> {formatDuration(it.duration)}
+                        <Icon name="play" size={11} fill strokeWidth={0} />{" "}
+                        {formatDuration(it.duration)}
                       </span>
                     )}
                     {highlight?.has(it.id) && (
@@ -246,17 +227,27 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
                     {floats
                       .filter((f) => f.photoId === it.id)
                       .map((f) => (
-                        <span key={f.key} className="floatheart" aria-hidden="true">
+                        <span
+                          key={f.key}
+                          className="floatheart"
+                          aria-hidden="true"
+                        >
                           ♥
                         </span>
                       ))}
                     {likeFlash?.photoId === it.id && (
-                      <span key={likeFlash.key} className="bigheart bigheart--card" aria-hidden="true">
+                      <span
+                        key={likeFlash.key}
+                        className="bigheart bigheart--card"
+                        aria-hidden="true"
+                      >
                         ♥
                       </span>
                     )}
                   </span>
-                  {it.caption && <span className="card__caption">{it.caption}</span>}
+                  {it.caption && (
+                    <span className="card__caption">{it.caption}</span>
+                  )}
                   <span className="card__foot">
                     <Avatar guest={it.guest} urlFor={urlFor} size={20} />
                     <span className="card__name">
@@ -264,16 +255,22 @@ export function Masonry({ photos, urlFor, onSelect, highlight, resetKey, pulse, 
                       <RoleBadge name={it.guest.name} size={12} />
                     </span>
                     {it.hearts > 0 && (
-                      <span className={"card__hearts" + (it.hearted ? " card__hearts--on" : "")}>
-                        <Icon name="heart" size={12} fill={it.hearted} /> {it.hearts}
+                      <span
+                        className={
+                          "card__hearts" +
+                          (it.hearted ? " card__hearts--on" : "")
+                        }
+                      >
+                        <Icon name="heart" size={12} fill={it.hearted} />{" "}
+                        {it.hearts}
                       </span>
                     )}
                   </span>
                 </button>
-              ),
-            )}
-          </div>
-        ))}
+              ))}
+            </div>
+          ))}
+        </div>
         <div ref={sentinelRef} className="masonry__sentinel" />
       </div>
     </div>
@@ -288,7 +285,8 @@ function AutoVideo({ src, poster }: { src: string; poster: string }) {
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) el.play().catch(() => undefined);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6)
+          el.play().catch(() => undefined);
         else el.pause();
       },
       { threshold: [0, 0.6] },
@@ -299,7 +297,18 @@ function AutoVideo({ src, poster }: { src: string; poster: string }) {
       el.pause();
     };
   }, []);
-  return <video ref={ref} src={src} poster={poster} muted playsInline loop preload="metadata" className="loaded" />;
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      muted
+      playsInline
+      loop
+      preload="metadata"
+      className="loaded"
+    />
+  );
 }
 
 /** Image that fades in once decoded (also when it comes straight from cache). */
