@@ -50,7 +50,8 @@ export function createDemoApi(): Api {
   let me: Guest | null = null;
   const urls = new Map<string, string>();
   let photos: Photo[] = [];
-  let handlers: RealtimeHandlers | null = null;
+  const subscribers = new Set<RealtimeHandlers>();
+  const each = (fn: (h: RealtimeHandlers) => void) => subscribers.forEach(fn);
   const WISHES = [
     "Que votre histoire soit longue, drôle et pleine de voyages. On vous aime !",
     "Anass, tu as gagné le gros lot. Boutaina, bon courage 😄",
@@ -168,16 +169,16 @@ export function createDemoApi(): Api {
       return photos.map((p) => ({ ...p }));
     },
     subscribe(h) {
-      handlers = h;
+      subscribers.add(h);
       // Pretend other guests are reacting so the live effects can be seen in demo mode.
       const timer = window.setInterval(() => {
         const p = photos[Math.floor(Math.random() * Math.min(photos.length, 8))];
         if (!p) return;
         p.hearts += 1;
-        handlers?.onHeart(p.id, guests[Math.floor(Math.random() * guests.length)].id, 1);
+        h.onHeart(p.id, guests[Math.floor(Math.random() * guests.length)].id, 1);
       }, 3500);
       return () => {
-        handlers = null;
+        subscribers.delete(h);
         window.clearInterval(timer);
       };
     },
@@ -220,7 +221,7 @@ export function createDemoApi(): Api {
         const s = { score: 7.5, theme: "guests", tags: ["demo"], reason: "Demo score." };
         const p = photos.find((x) => x.id === id);
         if (p) p.score = s;
-        handlers?.onScore(id, s);
+        each((h) => h.onScore(id, s));
       }, 4000);
       return photo;
     },

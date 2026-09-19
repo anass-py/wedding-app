@@ -73,6 +73,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
   const sb = createClient(url, anonKey, { db: { schema: SCHEMA } });
   let guest: Guest | null = null;
   let authId: string | null = null;
+  let channelSeq = 0; // each subscribe() gets its own channel: reusing a topic after subscribe() throws
 
   function toPhoto(r: PhotoRow): Photo {
     const hearts = r.hearts ?? [];
@@ -261,7 +262,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     subscribe(h: RealtimeHandlers) {
       const channel: RealtimeChannel = sb
-        .channel("wall")
+        .channel(`wall-${++channelSeq}`)
         .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "photos" }, async (p) => {
           const photo = await fetchOne((p.new as { id: string }).id).catch(() => null);
           if (photo) h.onPhotoInsert(photo);
