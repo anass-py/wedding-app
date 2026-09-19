@@ -169,3 +169,60 @@ begin
   return query select * from public.guests where id = gid;
 end $$;
 grant execute on function public.claim_guest(text) to authenticated;
+
+-- ── v2.7: one profile, many devices ─────────────────────────────────────────
+-- Each device (anonymous auth user) is linked to a guest through guest_devices, so a
+-- phone and a laptop can both stay signed in as the same person.
+create table if not exists public.guest_devices (
+  auth_id    uuid primary key references auth.users(id) on delete cascade,
+  guest_id   uuid not null references public.guests(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.guest_devices enable row level security;
+drop policy if exists "devices: read own" on public.guest_devices;
+create policy "devices: read own" on public.guest_devices for select to authenticated using (auth_id = auth.uid());
+
+insert into public.guest_devices (auth_id, guest_id)
+select g.auth_id, g.id from public.guests g
+on conflict (auth_id) do nothing;
+
+-- Who am I? (through the devices table)
+create or replace function public.current_guest_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select guest_id from public.guest_devices where auth_id = auth.uid()
+$$;
+
+create or replace function public.my_guest() returns setof public.guests
+language sql stable security definer set search_path = public as $$
+  select g.* from public.guests g join public.guest_devices d on d.guest_id = g.id where d.auth_id = auth.uid()
+$$;
+grant execute on function public.my_guest() to authenticated;
+
+-- The device that creates a profile is linked to it automatically.
+create or replace function public.guest_device_on_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.guest_devices (auth_id, guest_id) values (new.auth_id, new.id)
+  on conflict (auth_id) do update set guest_id = excluded.guest_id;
+  return new;
+end $$;
+drop trigger if exists guests_device on public.guests;
+create trigger guests_device after insert on public.guests for each row execute function public.guest_device_on_insert();
+
+-- Guests can edit their profile from any linked device.
+drop policy if exists "guests: update self" on public.guests;
+create policy "guests: update self" on public.guests for update to authenticated using (id = public.current_guest_id());
+
+-- Reconnect = add this device to the profile with that name (other devices stay linked).
+create or replace function public.claim_guest(p_name text) returns setof public.guests
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  if exists (select 1 from public.guest_devices where auth_id = auth.uid()) then raise exception 'already registered'; end if;
+  select id into gid from public.guests where lower(btrim(name)) = lower(btrim(p_name)) limit 1;
+  if gid is null then raise exception 'no guest with this name'; end if;
+  insert into public.guest_devices (auth_id, guest_id) values (auth.uid(), gid);
+  return query select * from public.guests where id = gid;
+end $$;
+grant execute on function public.claim_guest(text) to authenticated;

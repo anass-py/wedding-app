@@ -148,9 +148,11 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async init() {
       const session = await ensureSession();
       authId = session.user.id;
-      const { data, error } = await sb.from("guests").select(GUEST_SELECT).eq("auth_id", authId).maybeSingle();
+      // Through guest_devices: a profile can be linked to several devices.
+      const { data, error } = await sb.rpc("my_guest");
       if (error) throw error;
-      guest = data ? toGuest(data as GuestRow) : null;
+      const row = (Array.isArray(data) ? data[0] : data) as GuestRow | undefined;
+      guest = row ? toGuest(row) : null;
       return guest;
     },
 
