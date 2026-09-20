@@ -381,6 +381,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
     },
 
+    async heartbeat() {
+      await sb.rpc("heartbeat");
+    },
+
     async listMessages() {
       const { data, error } = await sb.from("messages").select(MESSAGE_SELECT).order("created_at", { ascending: false }).limit(1000);
       if (error) throw error;

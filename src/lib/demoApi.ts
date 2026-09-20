@@ -238,6 +238,7 @@ export function createDemoApi(): Api {
     urlFor(path) {
       return urls.get(path) ?? "";
     },
+    async heartbeat() {},
     async listMessages() {
       return messages.map((m) => ({ ...m }));
     },

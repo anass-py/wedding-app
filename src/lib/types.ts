@@ -86,6 +86,8 @@ export interface Api {
   setHeart(photoId: string, hearted: boolean): Promise<void>;
   deletePhoto(photo: Photo): Promise<void>;
   urlFor(path: string): string;
+  /** "I'm here" ping for the hosts' online/last-seen view. */
+  heartbeat(): Promise<void>;
   listMessages(): Promise<Message[]>;
   postMessage(text: string): Promise<Message>;
   setMessageHeart(messageId: string, hearted: boolean): Promise<void>;

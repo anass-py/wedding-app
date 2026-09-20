@@ -319,5 +319,28 @@ language sql security definer set search_path = dev as $$
 $$;
 grant execute on function dev.register_device(jsonb) to authenticated;
 
+-- ── v3.2: who is online now ──────────────────────────────────────────────────
+-- The app pings every minute while open; "online" = seen in the last 2 minutes.
+create or replace function dev.heartbeat() returns void
+language sql security definer set search_path = dev as $$
+  update dev.guest_devices set last_seen = now() where auth_id = auth.uid()
+$$;
+grant execute on function dev.heartbeat() to authenticated;
+
+-- One row per guest for the dashboard: Table Editor → guest_activity
+create or replace view dev.guest_activity as
+select
+  g.name,
+  (max(d.last_seen) > now() - interval '2 minutes') as online,
+  max(d.last_seen) as last_seen,
+  (array_agg(d.device order by d.last_seen desc nulls last))[1] as last_device,
+  (array_agg(concat_ws(', ', d.city, d.country) order by d.last_seen desc nulls last))[1] as last_location,
+  count(d.auth_id) as devices,
+  g.created_at as joined
+from dev.guests g
+left join dev.guest_devices d on d.guest_id = g.id
+group by g.id
+order by max(d.last_seen) desc nulls last;
+
 grant all on all tables in schema dev to anon, authenticated, service_role;
 grant all on all functions in schema dev to anon, authenticated, service_role;

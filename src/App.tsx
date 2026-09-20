@@ -61,6 +61,21 @@ export default function App() {
       });
   }, [api]);
 
+  // Presence: ping while the app is open (every minute + whenever it comes to the front).
+  useEffect(() => {
+    if (stage !== "ready") return;
+    const ping = () => {
+      if (document.visibilityState === "visible") void api.heartbeat().catch(() => undefined);
+    };
+    ping();
+    const id = window.setInterval(ping, 60_000);
+    document.addEventListener("visibilitychange", ping);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", ping);
+    };
+  }, [api, stage]);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2500);

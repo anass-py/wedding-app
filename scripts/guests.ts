@@ -20,15 +20,25 @@ const { data: photos } = await sb.from("photos").select("guest_id, kind");
 const { data: messages } = await sb.from("messages").select("guest_id");
 
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
-console.log(`\n${guests.length} guests\n`);
+const ago = (iso?: string | null) => {
+  if (!iso) return "never";
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (m < 2) return "● online";
+  if (m < 60) return `${m} min ago`;
+  if (m < 48 * 60) return `${Math.round(m / 60)} h ago`;
+  return fmt(iso);
+};
+const online = (devices ?? []).filter((d) => d.last_seen && Date.now() - new Date(d.last_seen).getTime() < 2 * 60_000);
+console.log(`\n${guests.length} guests · ${new Set(online.map((d) => d.guest_id)).size} online now\n`);
 guests.forEach((g, i) => {
   const mine = (devices ?? []).filter((d) => g.id === d.guest_id);
   const np = (photos ?? []).filter((p) => p.guest_id === g.id);
   const nm = (messages ?? []).filter((m) => m.guest_id === g.id).length;
-  console.log(`${String(i + 1).padStart(2, "0")}. ${g.name}  — joined ${fmt(g.created_at)} · ${np.filter((p) => p.kind !== "video").length} photos · ${np.filter((p) => p.kind === "video").length} videos · ${nm} words`);
+  const seen = mine.map((d) => d.last_seen ?? d.created_at).sort().at(-1);
+  console.log(`${String(i + 1).padStart(2, "0")}. ${g.name}  ${ago(seen)}  — joined ${fmt(g.created_at)} · ${np.filter((p) => p.kind !== "video").length} photos · ${np.filter((p) => p.kind === "video").length} videos · ${nm} words`);
   for (const d of mine) {
     const where = [d.city, d.region, d.country].filter(Boolean).join(", ") || "location unknown";
-    console.log(`      ${d.device ?? "device unknown"}  ·  ${where}  ·  ${d.locale ?? ""}  ·  last seen ${fmt(d.last_seen ?? d.created_at)}`);
+    console.log(`      ${d.device ?? "device unknown"}  ·  ${where}  ·  ${d.locale ?? ""}  ·  ${ago(d.last_seen ?? d.created_at)}`);
   }
 });
 console.log();
