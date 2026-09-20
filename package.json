@@ -18,7 +18,8 @@
     "doctor": "node --env-file-if-exists=.env --import tsx scripts/doctor.ts",
     "dev:https": "VITE_HTTPS=1 vite --host",
     "migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
-    "schema:dev": "node --import tsx scripts/schema-dev.ts"
+    "schema:dev": "node --import tsx scripts/schema-dev.ts",
+    "guests": "node --env-file-if-exists=.env --import tsx scripts/guests.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

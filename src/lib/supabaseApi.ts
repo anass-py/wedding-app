@@ -1,5 +1,6 @@
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
 import { processImage } from "./image";
+import { approximateLocation, describeDevice } from "./device";
 import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
 import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials } from "./types";
@@ -170,6 +171,28 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     onProgress?.(1);
   }
 
+  /** Once a day per device: note what it is and roughly where (for the hosts only). */
+  function registerDevice() {
+    const key = "wedding.device.registered";
+    try {
+      const last = Number(localStorage.getItem(key) ?? 0);
+      if (Date.now() - last < 24 * 3600_000) return;
+    } catch {
+      /* ignore */
+    }
+    void (async () => {
+      const info = { ...describeDevice(), ...(await approximateLocation()) };
+      const { error } = await sb.rpc("register_device", { p: info });
+      if (!error) {
+        try {
+          localStorage.setItem(key, String(Date.now()));
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
+  }
+
   async function fetchOne(id: string): Promise<Photo | null> {
     const { data, error } = await sb.from("photos").select(PHOTO_SELECT).eq("id", id).maybeSingle();
     if (error) throw error;
@@ -190,6 +213,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       if (error) throw error;
       const row = (Array.isArray(data) ? data[0] : data) as GuestRow | undefined;
       guest = row ? toGuest(row) : null;
+      if (guest) registerDevice();
       return guest;
     },
 
@@ -217,6 +241,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       }
       if (error) throw error;
       guest = toGuest(data as GuestRow);
+      registerDevice();
       return guest;
     },
 
@@ -241,6 +266,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const row = (Array.isArray(data) ? data[0] : data) as GuestRow | undefined;
       if (!row) throw new Error("no guest with this name");
       guest = toGuest(row);
+      registerDevice();
       return guest;
     },
 

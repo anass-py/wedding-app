@@ -291,5 +291,33 @@ end $$;
 revoke all on function dev.exec_sql(text) from public, anon, authenticated;
 grant execute on function dev.exec_sql(text) to service_role;
 
+-- ── v3.1: what each guest device is, and roughly where ───────────────────────
+alter table dev.guest_devices
+  add column if not exists device     text,        -- "iPhone · Safari (installed)"
+  add column if not exists user_agent text,
+  add column if not exists locale     text,
+  add column if not exists screen     text,
+  add column if not exists city       text,
+  add column if not exists region     text,
+  add column if not exists country    text,
+  add column if not exists ip         text,
+  add column if not exists last_seen  timestamptz;
+
+create or replace function dev.register_device(p jsonb) returns void
+language sql security definer set search_path = dev as $$
+  update dev.guest_devices set
+    device = coalesce(p->>'device', device),
+    user_agent = coalesce(p->>'user_agent', user_agent),
+    locale = coalesce(p->>'locale', locale),
+    screen = coalesce(p->>'screen', screen),
+    city = coalesce(p->>'city', city),
+    region = coalesce(p->>'region', region),
+    country = coalesce(p->>'country', country),
+    ip = coalesce(p->>'ip', ip),
+    last_seen = now()
+  where auth_id = auth.uid()
+$$;
+grant execute on function dev.register_device(jsonb) to authenticated;
+
 grant all on all tables in schema dev to anon, authenticated, service_role;
 grant all on all functions in schema dev to anon, authenticated, service_role;
