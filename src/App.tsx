@@ -78,8 +78,6 @@ export default function App() {
   // Keep the detail view in sync with live heart/score updates.
   const selected = selectedId ? (photos.find((p) => p.id === selectedId) ?? null) : null;
   const topIds = useMemo(() => new Set(topPhotos(photos, "all").map((p) => p.id)), [photos]);
-  const videoCount = useMemo(() => photos.filter((p) => p.kind === "video").length, [photos]);
-  const photoCount = photos.length - videoCount;
 
   if (stage === "loading") {
     return (
@@ -133,11 +131,6 @@ export default function App() {
         </h1>
         <div className="ornament header__ornament">
           <span>✦</span>
-        </div>
-        <div className="header__sub">
-          {photoCount === 1 ? t("photoOne") : t("photosCount", { n: photoCount })}
-          {videoCount > 0 && ` · ${videoCount === 1 ? t("videoOne") : t("videosCount", { n: videoCount })}`}
-          {messages.length > 0 && ` · ${messages.length === 1 ? t("messageOne") : t("messagesCount", { n: messages.length })}`}
         </div>
         <button className="langtoggle header__lang" onClick={() => setLang(lang === "fr" ? "en" : "fr")} aria-label={t("language")}>
           <span className={lang === "fr" ? "on" : ""}>FR</span>
