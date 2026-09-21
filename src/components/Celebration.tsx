@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../i18n";
+import { Icon } from "./Icon";
 import type { Message, Photo } from "../lib/types";
 
 interface Props {
   photos?: Photo[];
   message?: Message;
+  /** A trend was added: show its note/link with the trend copy. */
+  trendNote?: string | null;
   urlFor: (path: string) => string;
   onDone: () => void;
 }
@@ -13,7 +16,7 @@ const HOLD_MS = 2300;
 const OUT_MS = 550;
 
 /** Full-screen "Posted!" moment: photo springs in, sparks burst, then it flies to the wall. */
-export function Celebration({ photos = [], message, urlFor, onDone }: Props) {
+export function Celebration({ photos = [], message, trendNote, urlFor, onDone }: Props) {
   const { t } = useI18n();
   const [phase, setPhase] = useState<"in" | "out">("in");
 
@@ -64,7 +67,12 @@ export function Celebration({ photos = [], message, urlFor, onDone }: Props) {
             />
           ))}
         </div>
-        {message ? (
+        {trendNote !== undefined ? (
+          <div className="celebrate__photo celebrate__note celebrate__trend">
+            <Icon name="reel" size={44} />
+            {trendNote && <p className="note__text">{trendNote}</p>}
+          </div>
+        ) : message ? (
           <div className="celebrate__photo celebrate__note">
             <span className="note__quote" aria-hidden="true">
               “
@@ -78,8 +86,10 @@ export function Celebration({ photos = [], message, urlFor, onDone }: Props) {
           </div>
         )}
       </div>
-      <h2 className="celebrate__title">{message ? t("messageSent") : t("posted")}</h2>
-      <p className="celebrate__sub">{message ? t("messageCelebrate") : photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}</p>
+      <h2 className="celebrate__title">{trendNote !== undefined ? t("trendSent") : message ? t("messageSent") : t("posted")}</h2>
+      <p className="celebrate__sub">
+        {trendNote !== undefined ? t("trendCelebrate") : message ? t("messageCelebrate") : photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}
+      </p>
     </div>
   );
 }

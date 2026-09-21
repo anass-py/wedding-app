@@ -6,7 +6,7 @@ import { THEMES } from "../config";
 import { processImage } from "./image";
 import { uid } from "./uid";
 import { isVideoFile, processVideo } from "./video";
-import type { Api, Guest, Message, Photo, RealtimeHandlers } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers, Trend } from "./types";
 
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
 const EMOJI = ["💍", "💐", "🥂", "💃", "🎂", "🕺", "✨", "🌹", "🎶", "📸", "🍽️", "🎉"];
@@ -57,6 +57,23 @@ export function createDemoApi(): Api {
     "Anass, tu as gagné le gros lot. Boutaina, bon courage 😄",
     "La plus belle soirée de l’année. Merci pour tout.",
   ];
+  let trends: Trend[] = [
+    { url: "https://www.youtube.com/shorts/dQw4w9WgXcQ", provider: "youtube" as const, external_id: "dQw4w9WgXcQ", note: "L’entrée des mariés, version 2026 ?" },
+    { url: "https://www.instagram.com/reel/C0000000000/", provider: "instagram" as const, external_id: "C0000000000", note: "Ça, pour la première danse." },
+  ].map((t, i) => ({
+    ...t,
+    id: `trend-${i}`,
+    guest_id: guests[(i + 4) % guests.length].id,
+    video_path: null,
+    thumb_path: null,
+    width: null,
+    height: null,
+    duration: null,
+    created_at: new Date(Date.now() - (i * 15 + 3) * 60_000).toISOString(),
+    guest: guests[(i + 4) % guests.length],
+    hearts: 4 - i * 2,
+    hearted: false,
+  }));
   let messages: Message[] = WISHES.map((text, i) => ({
     kind: "message",
     id: `msg-${i}`,
@@ -257,6 +274,25 @@ export function createDemoApi(): Api {
     },
     async deleteMessage(id) {
       messages = messages.filter((m) => m.id !== id);
+    },
+    async listTrends() {
+      return trends.map((t) => ({ ...t }));
+    },
+    async postTrend(input) {
+      if (!me) throw new Error("Not registered");
+      const t: Trend = { id: uid(), guest_id: me.id, url: input.url, provider: input.provider, external_id: input.external_id, note: input.note?.trim() || null, video_path: null, thumb_path: null, width: null, height: null, duration: null, created_at: new Date().toISOString(), guest: me, hearts: 0, hearted: false };
+      trends = [t, ...trends];
+      return t;
+    },
+    async setTrendHeart(id, hearted) {
+      const t = trends.find((x) => x.id === id);
+      if (t) {
+        t.hearted = hearted;
+        t.hearts += hearted ? 1 : -1;
+      }
+    },
+    async deleteTrend(id) {
+      trends = trends.filter((t) => t.id !== id);
     },
   };
 }

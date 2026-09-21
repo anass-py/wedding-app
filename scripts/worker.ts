@@ -6,6 +6,7 @@
  */
 import { rankOnce } from "./rank";
 import { transcodeOnce } from "./transcode";
+import { trendsOnce } from "./trends";
 
 async function loop() {
   for (;;) {
@@ -14,6 +15,11 @@ async function loop() {
       did += await transcodeOnce();
     } catch (e) {
       console.error("transcode:", e instanceof Error ? e.message : e);
+    }
+    try {
+      did += await trendsOnce();
+    } catch (e) {
+      console.error("trends:", e instanceof Error ? e.message : e);
     }
     try {
       did += await rankOnce();

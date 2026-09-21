@@ -11,18 +11,20 @@ import { PhotoDetail } from "./components/PhotoDetail";
 import { ProfileSheet } from "./components/ProfileSheet";
 import { SkeletonGrid } from "./components/Skeleton";
 import { TopPhotos } from "./components/TopPhotos";
+import { Trends } from "./components/Trends";
 import { UploadSheet } from "./components/UploadSheet";
 import { Welcome } from "./components/Welcome";
 import { useMessages } from "./hooks/useMessages";
+import { useTrends } from "./hooks/useTrends";
 import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { describeError, isSchemaOutOfDate } from "./lib/errors";
 import { topPhotos } from "./lib/ranking";
-import type { Guest, Message, Photo } from "./lib/types";
+import type { Guest, Message, Photo, Trend } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
-type Tab = "wall" | "top";
+type Tab = "wall" | "top" | "trends";
 /** "Sara & Yassine" → ["Sara", "Yassine"] so the ampersand can be styled. */
 const coupleNames = WEDDING.couple.split(/\s*&\s*/).map((n) => n.trim()).filter(Boolean);
 
@@ -47,6 +49,8 @@ export default function App() {
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
   const { messages, addMessage, toggleMessageHeart, removeMessage } = useMessages(api, stage === "ready");
   const [celebratingMessage, setCelebratingMessage] = useState<Message | null>(null);
+  const { trends, addTrend, toggleTrendHeart, removeTrend } = useTrends(api, stage === "ready");
+  const [celebratingTrend, setCelebratingTrend] = useState<Trend | null>(null);
 
   useEffect(() => {
     api
@@ -215,6 +219,15 @@ export default function App() {
               </div>
             )}
           </>
+        ) : tab === "trends" ? (
+          <Trends
+            trends={trends}
+            api={api}
+            meId={guest?.id ?? null}
+            onHeart={toggleTrendHeart}
+            onDelete={(tr) => window.confirm(t("confirmDeleteTrend")) && void removeTrend(tr)}
+            onOpenGuest={setGuestCard}
+          />
         ) : (
           <TopPhotos photos={photos} api={api} onSelect={(p) => setSelectedId(p.id)} />
         )}
@@ -230,6 +243,9 @@ export default function App() {
           </button>
           <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")} aria-label={t("top")}>
             <Icon name="star" size={24} fill={tab === "top"} strokeWidth={1.6} />
+          </button>
+          <button className={"nav__btn" + (tab === "trends" ? " nav__btn--on" : "")} onClick={() => setTab("trends")} aria-label={t("trends")}>
+            <Icon name="reel" size={24} strokeWidth={tab === "trends" ? 2 : 1.6} />
           </button>
         </div>
       </nav>
@@ -254,9 +270,21 @@ export default function App() {
           onError={showToast}
           onDone={(batch) => setCelebrating(batch)}
           onMessage={(m) => setCelebratingMessage(m)}
+          onTrend={(tr) => setCelebratingTrend(tr)}
         />
       )}
       {celebrating && <Celebration photos={celebrating} urlFor={api.urlFor} onDone={finishCelebration} />}
+      {celebratingTrend && (
+        <Celebration
+          trendNote={celebratingTrend.note}
+          urlFor={api.urlFor}
+          onDone={() => {
+            addTrend(celebratingTrend);
+            setCelebratingTrend(null);
+            setTab("trends");
+          }}
+        />
+      )}
       {celebratingMessage && (
         <Celebration
           message={celebratingMessage}

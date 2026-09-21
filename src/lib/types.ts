@@ -52,6 +52,24 @@ export interface Message {
   hearted: boolean;
 }
 
+export interface Trend {
+  id: string;
+  guest_id: string;
+  url: string;
+  provider: "instagram" | "tiktok" | "youtube" | "other";
+  external_id: string | null;
+  note: string | null;
+  video_path: string | null;
+  thumb_path: string | null;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  created_at: string;
+  guest: Guest;
+  hearts: number;
+  hearted: boolean;
+}
+
 /** What the wall shows: photos, videos and guestbook messages, newest first. */
 export type WallItem = Photo | Message;
 
@@ -64,6 +82,10 @@ export interface RealtimeHandlers {
   onMessageInsert?: (message: Message) => void;
   onMessageDelete?: (id: string) => void;
   onMessageHeart?: (messageId: string, guestId: string, delta: 1 | -1) => void;
+  onTrendInsert?: (trend: Trend) => void;
+  onTrendUpdate?: (trend: Trend) => void;
+  onTrendDelete?: (id: string) => void;
+  onTrendHeart?: (trendId: string, guestId: string, delta: 1 | -1) => void;
 }
 
 export interface Api {
@@ -92,4 +114,8 @@ export interface Api {
   postMessage(text: string): Promise<Message>;
   setMessageHeart(messageId: string, hearted: boolean): Promise<void>;
   deleteMessage(id: string): Promise<void>;
+  listTrends(): Promise<Trend[]>;
+  postTrend(input: { url: string; provider: Trend["provider"]; external_id: string | null; note?: string }): Promise<Trend>;
+  setTrendHeart(trendId: string, hearted: boolean): Promise<void>;
+  deleteTrend(id: string): Promise<void>;
 }

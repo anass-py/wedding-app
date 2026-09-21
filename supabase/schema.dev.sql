@@ -342,5 +342,57 @@ left join dev.guest_devices d on d.guest_id = g.id
 group by g.id
 order by max(d.last_seen) desc nulls last;
 
+-- ── v3.3: tendances — reels to reproduce on the day ──────────────────────────
+create table if not exists dev.trends (
+  id          uuid primary key default gen_random_uuid(),
+  guest_id    uuid not null references dev.guests(id) on delete cascade,
+  url         text not null,
+  provider    text not null check (provider in ('instagram', 'tiktok', 'youtube', 'other')),
+  external_id text,
+  note        text check (note is null or char_length(note) <= 200),
+  -- filled by the worker when it fetches the file (optional)
+  video_path  text,
+  thumb_path  text,
+  width       int,
+  height      int,
+  duration    real,
+  created_at  timestamptz not null default now()
+);
+create index if not exists trends_created_at_idx on dev.trends (created_at desc);
+
+create table if not exists dev.trend_hearts (
+  trend_id   uuid not null references dev.trends(id) on delete cascade,
+  guest_id   uuid not null references dev.guests(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (trend_id, guest_id)
+);
+
+alter table dev.trends       enable row level security;
+alter table dev.trend_hearts enable row level security;
+drop policy if exists "trends: read all"   on dev.trends;
+drop policy if exists "trends: insert own" on dev.trends;
+drop policy if exists "trends: delete own" on dev.trends;
+drop policy if exists "thearts: read all"   on dev.trend_hearts;
+drop policy if exists "thearts: insert own" on dev.trend_hearts;
+drop policy if exists "thearts: delete own" on dev.trend_hearts;
+create policy "trends: read all"   on dev.trends for select to authenticated using (true);
+create policy "trends: insert own" on dev.trends for insert to authenticated with check (guest_id = dev.current_guest_id());
+create policy "trends: delete own" on dev.trends for delete to authenticated using (guest_id = dev.current_guest_id());
+create policy "thearts: read all"   on dev.trend_hearts for select to authenticated using (true);
+create policy "thearts: insert own" on dev.trend_hearts for insert to authenticated with check (guest_id = dev.current_guest_id());
+create policy "thearts: delete own" on dev.trend_hearts for delete to authenticated using (guest_id = dev.current_guest_id());
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table dev.trends;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table dev.trend_hearts;
+  exception when duplicate_object then null;
+  end;
+end $$;
+
 grant all on all tables in schema dev to anon, authenticated, service_role;
 grant all on all functions in schema dev to anon, authenticated, service_role;

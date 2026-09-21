@@ -333,3 +333,55 @@ from public.guests g
 left join public.guest_devices d on d.guest_id = g.id
 group by g.id
 order by max(d.last_seen) desc nulls last;
+
+-- ── v3.3: tendances — reels to reproduce on the day ──────────────────────────
+create table if not exists public.trends (
+  id          uuid primary key default gen_random_uuid(),
+  guest_id    uuid not null references public.guests(id) on delete cascade,
+  url         text not null,
+  provider    text not null check (provider in ('instagram', 'tiktok', 'youtube', 'other')),
+  external_id text,
+  note        text check (note is null or char_length(note) <= 200),
+  -- filled by the worker when it fetches the file (optional)
+  video_path  text,
+  thumb_path  text,
+  width       int,
+  height      int,
+  duration    real,
+  created_at  timestamptz not null default now()
+);
+create index if not exists trends_created_at_idx on public.trends (created_at desc);
+
+create table if not exists public.trend_hearts (
+  trend_id   uuid not null references public.trends(id) on delete cascade,
+  guest_id   uuid not null references public.guests(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (trend_id, guest_id)
+);
+
+alter table public.trends       enable row level security;
+alter table public.trend_hearts enable row level security;
+drop policy if exists "trends: read all"   on public.trends;
+drop policy if exists "trends: insert own" on public.trends;
+drop policy if exists "trends: delete own" on public.trends;
+drop policy if exists "thearts: read all"   on public.trend_hearts;
+drop policy if exists "thearts: insert own" on public.trend_hearts;
+drop policy if exists "thearts: delete own" on public.trend_hearts;
+create policy "trends: read all"   on public.trends for select to authenticated using (true);
+create policy "trends: insert own" on public.trends for insert to authenticated with check (guest_id = public.current_guest_id());
+create policy "trends: delete own" on public.trends for delete to authenticated using (guest_id = public.current_guest_id());
+create policy "thearts: read all"   on public.trend_hearts for select to authenticated using (true);
+create policy "thearts: insert own" on public.trend_hearts for insert to authenticated with check (guest_id = public.current_guest_id());
+create policy "thearts: delete own" on public.trend_hearts for delete to authenticated using (guest_id = public.current_guest_id());
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.trends;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.trend_hearts;
+  exception when duplicate_object then null;
+  end;
+end $$;

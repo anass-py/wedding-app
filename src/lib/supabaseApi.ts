@@ -3,7 +3,7 @@ import { processImage } from "./image";
 import { approximateLocation, describeDevice } from "./device";
 import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
-import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials, Trend } from "./types";
 
 /**
  * Production talks to the `public` tables and the `photos` bucket. Set VITE_DB_SCHEMA=dev and
@@ -53,6 +53,26 @@ interface MessageRow {
   created_at: string;
   guest: GuestRow | GuestRow[] | null;
   message_hearts: { guest_id: string }[] | null;
+}
+
+const TREND_SELECT =
+  "id, guest_id, url, provider, external_id, note, video_path, thumb_path, width, height, duration, created_at, " +
+  "guest:guests!trends_guest_id_fkey(id, name, avatar_path, socials), trend_hearts(guest_id)";
+interface TrendRow {
+  id: string;
+  guest_id: string;
+  url: string;
+  provider: Trend["provider"];
+  external_id: string | null;
+  note: string | null;
+  video_path: string | null;
+  thumb_path: string | null;
+  width: number | null;
+  height: number | null;
+  duration: number | string | null;
+  created_at: string;
+  guest: GuestRow | GuestRow[] | null;
+  trend_hearts: { guest_id: string }[] | null;
 }
 
 interface ScoreRow {
@@ -120,6 +140,33 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       hearts: hearts.length,
       hearted: !!guest && hearts.some((h) => h.guest_id === guest!.id),
     };
+  }
+
+  function toTrend(r: TrendRow): Trend {
+    const hearts = r.trend_hearts ?? [];
+    return {
+      id: r.id,
+      guest_id: r.guest_id,
+      url: r.url,
+      provider: r.provider,
+      external_id: r.external_id,
+      note: r.note,
+      video_path: r.video_path,
+      thumb_path: r.thumb_path,
+      width: r.width,
+      height: r.height,
+      duration: r.duration == null ? null : Number(r.duration),
+      created_at: r.created_at,
+      guest: toGuest(one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null }),
+      hearts: hearts.length,
+      hearted: !!guest && hearts.some((h) => h.guest_id === guest!.id),
+    };
+  }
+
+  async function fetchTrend(id: string): Promise<Trend | null> {
+    const { data, error } = await sb.from("trends").select(TREND_SELECT).eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? toTrend(data as unknown as TrendRow) : null;
   }
 
   async function fetchMessage(id: string): Promise<Message | null> {
@@ -319,6 +366,25 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
           const r = p.old as { message_id: string; guest_id: string };
           h.onMessageHeart?.(r.message_id, r.guest_id, -1);
         })
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "trends" }, async (p) => {
+          const t = await fetchTrend((p.new as { id: string }).id).catch(() => null);
+          if (t) h.onTrendInsert?.(t);
+        })
+        .on("postgres_changes", { event: "UPDATE", schema: SCHEMA, table: "trends" }, async (p) => {
+          const t = await fetchTrend((p.new as { id: string }).id).catch(() => null);
+          if (t) h.onTrendUpdate?.(t);
+        })
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "trends" }, (p) => {
+          h.onTrendDelete?.((p.old as { id: string }).id);
+        })
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "trend_hearts" }, (p) => {
+          const r = p.new as { trend_id: string; guest_id: string };
+          h.onTrendHeart?.(r.trend_id, r.guest_id, 1);
+        })
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "trend_hearts" }, (p) => {
+          const r = p.old as { trend_id: string; guest_id: string };
+          h.onTrendHeart?.(r.trend_id, r.guest_id, -1);
+        })
         .on("postgres_changes", { event: "*", schema: SCHEMA, table: "photo_scores" }, (p) => {
           const r = p.new as ScoreRow & { photo_id?: string };
           const s = toScore(r);
@@ -413,6 +479,41 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     async deleteMessage(id) {
       const { error } = await sb.from("messages").delete().eq("id", id);
+      if (error) throw error;
+    },
+
+    async listTrends() {
+      const { data, error } = await sb.from("trends").select(TREND_SELECT).order("created_at", { ascending: false }).limit(500);
+      if (error) throw error;
+      return (data as unknown as TrendRow[]).map(toTrend);
+    },
+
+    async postTrend(input) {
+      if (!guest) throw new Error("Not registered");
+      const { data, error } = await sb
+        .from("trends")
+        .insert({ guest_id: guest.id, url: input.url, provider: input.provider, external_id: input.external_id, note: input.note?.trim() || null })
+        .select("id")
+        .single();
+      if (error) throw error;
+      const t = await fetchTrend(data.id);
+      if (!t) throw new Error("Trend vanished after insert");
+      return t;
+    },
+
+    async setTrendHeart(trendId, hearted) {
+      if (!guest) throw new Error("Not registered");
+      if (hearted) {
+        const { error } = await sb.from("trend_hearts").upsert({ trend_id: trendId, guest_id: guest.id }, { onConflict: "trend_id,guest_id", ignoreDuplicates: true });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from("trend_hearts").delete().eq("trend_id", trendId).eq("guest_id", guest.id);
+        if (error) throw error;
+      }
+    },
+
+    async deleteTrend(id) {
+      const { error } = await sb.from("trends").delete().eq("id", id);
       if (error) throw error;
     },
   };
