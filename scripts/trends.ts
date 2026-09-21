@@ -69,14 +69,15 @@ export async function trendsOnce(): Promise<number> {
     return 0;
   }
   const ffmpeg = await ffmpegPath();
-  const common = await ytDlpArgs();
+  const common = [...(await ytDlpArgs()), "--ffmpeg-location", ffmpeg];
   console.log(`Fetching ${todo.length} trend video(s)…`);
   for (const t of todo) {
     const dir = await mkdtemp(join(tmpdir(), "trend-"));
     try {
       await supabase().from("trends").update({ fetch_attempted_at: new Date().toISOString() }).eq("id", t.id);
       await run(bin, [...common, "-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4", "-o", join(dir, "in.%(ext)s"), t.url], { maxBuffer: 1 << 26 });
-      const input = (await readdir(dir)).find((f) => f.startsWith("in."));
+      const files = (await readdir(dir)).filter((f) => f.startsWith("in."));
+      const input = files.find((f) => f === "in.mp4") ?? files.find((f) => /\.(mp4|mov|webm|mkv)$/i.test(f) && !/\.m4a$/i.test(f)) ?? files[0];
       if (!input) throw new Error("no file downloaded");
       const out = join(dir, "out.mp4");
       const poster = join(dir, "poster.jpg");

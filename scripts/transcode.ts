@@ -108,7 +108,11 @@ export async function transcodeOnce(): Promise<number> {
     try {
       await transcodeOne(row, ffmpeg);
     } catch (e) {
-      console.error(`  ${row.id}:`, e instanceof Error ? e.message : e);
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/Object not found/i.test(msg)) {
+        await supabase().from("photos").delete().eq("id", row.id);
+        console.warn(`  ${row.id}: file missing in storage — row removed`);
+      } else console.error(`  ${row.id}:`, msg);
     }
   }
   return todo.length;
