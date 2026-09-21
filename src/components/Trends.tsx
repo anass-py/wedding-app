@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { buzz } from "../lib/haptics";
 import { PROVIDER_LABEL, embedUrl } from "../lib/trends";
@@ -53,7 +53,7 @@ function TrendCard({ trend: tr, api, mine, onHeart, onDelete, onOpenGuest }: { t
     <article className="trend">
       <div className={"trend__media" + (tr.video_path ? " trend__media--native" : "")}>
         {tr.video_path ? (
-          <video src={api.urlFor(tr.video_path)} poster={tr.thumb_path ? api.urlFor(tr.thumb_path) : undefined} controls playsInline preload="metadata" />
+          <TrendVideo src={api.urlFor(tr.video_path)} poster={tr.thumb_path ? api.urlFor(tr.thumb_path) : undefined} />
         ) : playing && embed ? (
           <iframe src={embed} title={PROVIDER_LABEL[tr.provider]} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
         ) : (
@@ -98,5 +98,35 @@ function TrendCard({ trend: tr, api, mine, onHeart, onDelete, onOpenGuest }: { t
         </div>
       </div>
     </article>
+  );
+}
+
+/** Stored trend: plays muted while on screen, tap toggles sound (like Reels). */
+function TrendVideo({ src, poster }: { src: string; poster?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && e.intersectionRatio >= 0.6) el.play().catch(() => undefined);
+        else el.pause();
+      },
+      { threshold: [0, 0.6] },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      el.pause();
+    };
+  }, []);
+  return (
+    <>
+      <video ref={ref} src={src} poster={poster} muted={muted} loop playsInline preload="metadata" onClick={() => setMuted((m) => !m)} />
+      <button className="trend__sound" onClick={() => setMuted((m) => !m)} aria-label={muted ? "unmute" : "mute"}>
+        <Icon name={muted ? "muted" : "sound"} size={18} />
+      </button>
+    </>
   );
 }

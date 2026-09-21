@@ -39,8 +39,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install yt-dlp (trend videos)
+        run: python3 -m pip install --quiet yt-dlp curl_cffi
       - name: Convert new videos
         run: npm run transcode
+      - name: Fetch new trend videos
+        run: npm run trends
       - name: Score new photos (AI)
         if: env.ANTHROPIC_API_KEY != ''
         run: npm run rank

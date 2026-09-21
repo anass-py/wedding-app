@@ -1,9 +1,12 @@
 /**
- * Optional: fetch trend videos so they play natively in the app (autoplay, no embed).
- * Needs yt-dlp on the machine running the worker:  brew install yt-dlp   (or pip install yt-dlp)
- * Enable with TRENDS_DOWNLOAD=1 in .env. Each reel is ~5–20 MB in storage.
+ * Fetches trend videos so they play natively in the app (autoplay, no embed, no platform chrome).
+ * Runs inside `npm run worker`; `npm run trends` runs one pass.
  *
- *   TRENDS_DOWNLOAD=1 npm run trends
+ * Needs yt-dlp:  python3 -m pip install --user yt-dlp curl_cffi
+ *   - YouTube and TikTok work anonymously.
+ *   - Instagram only works logged in: set YTDLP_BROWSER=brave (or chrome/safari) on the laptop
+ *     to borrow your browser's Instagram login, or YTDLP_COOKIES=/path/to/cookies.txt.
+ * TRENDS_DOWNLOAD=0 disables fetching (embeds only). Each reel is ~5–20 MB in storage.
  */
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
@@ -11,6 +14,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { createClient } from "@supabase/supabase-js";
 import { ffmpegPath } from "./transcode";
 
@@ -30,30 +35,47 @@ function supabase() {
   return client;
 }
 
-async function hasYtDlp(): Promise<boolean> {
-  try {
-    await run("yt-dlp", ["--version"]);
-    return true;
-  } catch {
-    return false;
+async function ytDlp(): Promise<string | null> {
+  const candidates = [process.env.YTDLP_PATH, "yt-dlp", join(homedir(), "Library/Python/3.14/bin/yt-dlp"), join(homedir(), "Library/Python/3.13/bin/yt-dlp"), join(homedir(), ".local/bin/yt-dlp"), "/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp"].filter(Boolean) as string[];
+  for (const c of candidates) {
+    if (c !== "yt-dlp" && !existsSync(c)) continue;
+    try {
+      await run(c, ["--version"]);
+      return c;
+    } catch {
+      /* next */
+    }
   }
+  return null;
+}
+
+async function ytDlpArgs(): Promise<string[]> {
+  const args = ["--js-runtimes", "node", "--no-playlist", "--quiet", "--no-warnings"];
+  if (process.env.YTDLP_BROWSER) args.push("--cookies-from-browser", process.env.YTDLP_BROWSER);
+  else if (process.env.YTDLP_COOKIES) args.push("--cookies", process.env.YTDLP_COOKIES);
+  return args;
 }
 
 export async function trendsOnce(): Promise<number> {
-  if (!process.env.TRENDS_DOWNLOAD) return 0;
-  const { data: todo, error } = await supabase().from("trends").select("id, url, provider").is("video_path", null).order("created_at");
+  if (process.env.TRENDS_DOWNLOAD === "0") return 0;
+  const retryBefore = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { data: all, error } = await supabase().from("trends").select("id, url, provider, fetch_attempted_at").is("video_path", null).order("created_at");
   if (error) throw error;
-  if (!todo?.length) return 0;
-  if (!(await hasYtDlp())) {
-    console.warn("trends: yt-dlp not installed (brew install yt-dlp) — leaving embeds as they are.");
+  const todo = (all ?? []).filter((t) => !t.fetch_attempted_at || t.fetch_attempted_at < retryBefore);
+  if (!todo.length) return 0;
+  const bin = await ytDlp();
+  if (!bin) {
+    console.warn("trends: yt-dlp not installed (python3 -m pip install --user yt-dlp curl_cffi) — embeds stay as they are.");
     return 0;
   }
   const ffmpeg = await ffmpegPath();
+  const common = await ytDlpArgs();
   console.log(`Fetching ${todo.length} trend video(s)…`);
   for (const t of todo) {
     const dir = await mkdtemp(join(tmpdir(), "trend-"));
     try {
-      await run("yt-dlp", ["-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4", "-o", join(dir, "in.%(ext)s"), "--no-playlist", "--quiet", t.url], { maxBuffer: 1 << 26 });
+      await supabase().from("trends").update({ fetch_attempted_at: new Date().toISOString() }).eq("id", t.id);
+      await run(bin, [...common, "-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4", "-o", join(dir, "in.%(ext)s"), t.url], { maxBuffer: 1 << 26 });
       const input = (await readdir(dir)).find((f) => f.startsWith("in."));
       if (!input) throw new Error("no file downloaded");
       const out = join(dir, "out.mp4");
@@ -76,12 +98,16 @@ export async function trendsOnce(): Promise<number> {
           width: dims ? Number(dims[1]) : null,
           height: dims ? Number(dims[2]) : null,
           duration: dur ? Number(dur[1]) * 3600 + Number(dur[2]) * 60 + Number(dur[3]) : null,
+          fetch_error: null,
         })
         .eq("id", t.id);
       if (e3) throw e3;
       console.log(`  ${t.id.slice(0, 8)}  ${t.provider}  → stored`);
     } catch (e) {
-      console.error(`  ${t.id.slice(0, 8)}  ${t.provider}: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+      const msg = (e instanceof Error ? e.message : String(e)).split("\n").find((l) => /ERROR/.test(l)) ?? (e instanceof Error ? e.message.split("\n")[0] : String(e));
+      const short = msg.replace(/^ERROR:\s*/, "").slice(0, 300);
+      await supabase().from("trends").update({ fetch_error: short }).eq("id", t.id);
+      console.error(`  ${t.id.slice(0, 8)}  ${t.provider}: ${short}`);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

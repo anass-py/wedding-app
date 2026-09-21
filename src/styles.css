@@ -787,3 +787,4 @@ img { display: block; }
 .like--inline { position: static; filter: none; color: var(--muted); }
 .like--inline.like--on { color: #ff3040; }
 .celebrate__trend { display: grid; justify-items: center; gap: 10px; color: var(--gold); }
+.trend__sound { position: absolute; right: 10px; bottom: 10px; width: 38px; height: 38px; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; display: grid; place-items: center; backdrop-filter: blur(6px); }

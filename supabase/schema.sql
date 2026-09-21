@@ -385,3 +385,8 @@ begin
   exception when duplicate_object then null;
   end;
 end $$;
+
+-- ── v3.4: remember why a trend could not be fetched (and not hammer the platform) ──
+alter table public.trends
+  add column if not exists fetch_error text,
+  add column if not exists fetch_attempted_at timestamptz;

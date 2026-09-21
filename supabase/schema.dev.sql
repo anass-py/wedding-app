@@ -394,5 +394,10 @@ begin
   end;
 end $$;
 
+-- ── v3.4: remember why a trend could not be fetched (and not hammer the platform) ──
+alter table dev.trends
+  add column if not exists fetch_error text,
+  add column if not exists fetch_attempted_at timestamptz;
+
 grant all on all tables in schema dev to anon, authenticated, service_role;
 grant all on all functions in schema dev to anon, authenticated, service_role;
