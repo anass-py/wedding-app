@@ -21,10 +21,13 @@ async function loop() {
     } catch (e) {
       console.error("trends:", e instanceof Error ? e.message : e);
     }
-    try {
-      did += await rankOnce();
-    } catch (e) {
-      console.error("rank:", e instanceof Error ? e.message : e);
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (key && !key.endsWith("...")) {
+      try {
+        did += await rankOnce();
+      } catch (e) {
+        console.error("rank:", e instanceof Error ? e.message : e);
+      }
     }
     if (did === 0) process.stdout.write(".");
     await new Promise((r) => setTimeout(r, 60_000));

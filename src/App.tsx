@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { WEDDING } from "./config";
 import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
+import { CommentsSheet } from "./components/CommentsSheet";
 import { GuestCard } from "./components/GuestCard";
 import { Guestbook } from "./components/Guestbook";
 import { Icon } from "./components/Icon";
@@ -49,7 +50,9 @@ export default function App() {
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
   const { messages, addMessage, toggleMessageHeart, removeMessage } = useMessages(api, stage === "ready");
   const [celebratingMessage, setCelebratingMessage] = useState<Message | null>(null);
-  const { trends, addTrend, toggleTrendHeart, removeTrend } = useTrends(api, stage === "ready");
+  const { trends, addTrend, toggleTrendHeart, removeTrend, bumpComments } = useTrends(api, stage === "ready");
+  const [commentsFor, setCommentsFor] = useState<string | null>(null);
+  const commentsTrend = commentsFor ? (trends.find((x) => x.id === commentsFor) ?? null) : null;
   const [celebratingTrend, setCelebratingTrend] = useState<Trend | null>(null);
 
   useEffect(() => {
@@ -227,6 +230,7 @@ export default function App() {
             onHeart={toggleTrendHeart}
             onDelete={(tr) => window.confirm(t("confirmDeleteTrend")) && void removeTrend(tr)}
             onOpenGuest={setGuestCard}
+            onComments={(tr) => setCommentsFor(tr.id)}
           />
         ) : (
           <TopPhotos photos={photos} api={api} onSelect={(p) => setSelectedId(p.id)} />
@@ -274,6 +278,9 @@ export default function App() {
         />
       )}
       {celebrating && <Celebration photos={celebrating} urlFor={api.urlFor} onDone={finishCelebration} />}
+      {commentsTrend && guest && (
+        <CommentsSheet trend={commentsTrend} api={api} meId={guest.id} onClose={() => setCommentsFor(null)} onCount={(d) => bumpComments(commentsTrend.id, d)} onToast={showToast} />
+      )}
       {celebratingTrend && (
         <Celebration
           trendNote={celebratingTrend.note}

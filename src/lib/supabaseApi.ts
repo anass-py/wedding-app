@@ -3,7 +3,7 @@ import { processImage } from "./image";
 import { approximateLocation, describeDevice } from "./device";
 import { uid } from "./uid";
 import { isVideoFile, processVideo, videoExt } from "./video";
-import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials, Trend } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers, Score, Socials, Trend, TrendComment } from "./types";
 
 /**
  * Production talks to the `public` tables and the `photos` bucket. Set VITE_DB_SCHEMA=dev and
@@ -56,8 +56,17 @@ interface MessageRow {
 }
 
 const TREND_SELECT =
-  "id, guest_id, url, provider, external_id, note, video_path, thumb_path, width, height, duration, created_at, " +
-  "guest:guests!trends_guest_id_fkey(id, name, avatar_path, socials), trend_hearts(guest_id)";
+  "id, guest_id, url, provider, external_id, note, video_path, thumb_path, width, height, duration, fetch_error, created_at, " +
+  "guest:guests!trends_guest_id_fkey(id, name, avatar_path, socials), trend_hearts(guest_id), trend_comments(count)";
+const COMMENT_SELECT = "id, trend_id, guest_id, text, created_at, guest:guests!trend_comments_guest_id_fkey(id, name, avatar_path, socials)";
+interface CommentRow {
+  id: string;
+  trend_id: string;
+  guest_id: string;
+  text: string;
+  created_at: string;
+  guest: GuestRow | GuestRow[] | null;
+}
 interface TrendRow {
   id: string;
   guest_id: string;
@@ -70,9 +79,11 @@ interface TrendRow {
   width: number | null;
   height: number | null;
   duration: number | string | null;
+  fetch_error?: string | null;
   created_at: string;
   guest: GuestRow | GuestRow[] | null;
   trend_hearts: { guest_id: string }[] | null;
+  trend_comments: { count: number }[] | null;
 }
 
 interface ScoreRow {
@@ -156,11 +167,17 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       width: r.width,
       height: r.height,
       duration: r.duration == null ? null : Number(r.duration),
+      fetch_error: r.fetch_error ?? null,
       created_at: r.created_at,
       guest: toGuest(one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null }),
       hearts: hearts.length,
       hearted: !!guest && hearts.some((h) => h.guest_id === guest!.id),
+      comments: r.trend_comments?.[0]?.count ?? 0,
     };
+  }
+
+  function toComment(r: CommentRow): TrendComment {
+    return { id: r.id, trend_id: r.trend_id, guest_id: r.guest_id, text: r.text, created_at: r.created_at, guest: toGuest(one(r.guest) ?? { id: r.guest_id, name: "?", avatar_path: null }) };
   }
 
   async function fetchTrend(id: string): Promise<Trend | null> {
@@ -385,6 +402,15 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
           const r = p.old as { trend_id: string; guest_id: string };
           h.onTrendHeart?.(r.trend_id, r.guest_id, -1);
         })
+        .on("postgres_changes", { event: "INSERT", schema: SCHEMA, table: "trend_comments" }, async (p) => {
+          const id = (p.new as { id: string }).id;
+          const { data } = await sb.from("trend_comments").select(COMMENT_SELECT).eq("id", id).maybeSingle();
+          if (data) h.onTrendComment?.(toComment(data as unknown as CommentRow));
+        })
+        .on("postgres_changes", { event: "DELETE", schema: SCHEMA, table: "trend_comments" }, (p) => {
+          const r = p.old as { id: string; trend_id?: string };
+          h.onTrendCommentDelete?.(r.trend_id ?? "", r.id);
+        })
         .on("postgres_changes", { event: "*", schema: SCHEMA, table: "photo_scores" }, (p) => {
           const r = p.new as ScoreRow & { photo_id?: string };
           const s = toScore(r);
@@ -514,6 +540,24 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     async deleteTrend(id) {
       const { error } = await sb.from("trends").delete().eq("id", id);
+      if (error) throw error;
+    },
+
+    async listTrendComments(trendId) {
+      const { data, error } = await sb.from("trend_comments").select(COMMENT_SELECT).eq("trend_id", trendId).order("created_at").limit(500);
+      if (error) throw error;
+      return (data as unknown as CommentRow[]).map(toComment);
+    },
+
+    async postTrendComment(trendId, text) {
+      if (!guest) throw new Error("Not registered");
+      const { data, error } = await sb.from("trend_comments").insert({ trend_id: trendId, guest_id: guest.id, text: text.trim() }).select(COMMENT_SELECT).single();
+      if (error) throw error;
+      return toComment(data as unknown as CommentRow);
+    },
+
+    async deleteTrendComment(id) {
+      const { error } = await sb.from("trend_comments").delete().eq("id", id);
       if (error) throw error;
     },
   };

@@ -6,7 +6,7 @@ import { THEMES } from "../config";
 import { processImage } from "./image";
 import { uid } from "./uid";
 import { isVideoFile, processVideo } from "./video";
-import type { Api, Guest, Message, Photo, RealtimeHandlers, Trend } from "./types";
+import type { Api, Guest, Message, Photo, RealtimeHandlers, Trend, TrendComment } from "./types";
 
 const NAMES = ["Nadia", "Omar", "Léa", "Youssef", "Ines", "Karim", "Sofia", "Adam"];
 const EMOJI = ["💍", "💐", "🥂", "💃", "🎂", "🕺", "✨", "🌹", "🎶", "📸", "🍽️", "🎉"];
@@ -73,7 +73,13 @@ export function createDemoApi(): Api {
     guest: guests[(i + 4) % guests.length],
     hearts: 4 - i * 2,
     hearted: false,
+    comments: i === 0 ? 2 : 0,
+    fetch_error: null,
   }));
+  let comments: TrendComment[] = [
+    { id: "c1", trend_id: "trend-0", guest_id: guests[1].id, text: "OUI. Obligé.", created_at: new Date(Date.now() - 8 * 60_000).toISOString(), guest: guests[1] },
+    { id: "c2", trend_id: "trend-0", guest_id: guests[3].id, text: "Je gère la chorée si vous voulez 😏", created_at: new Date(Date.now() - 3 * 60_000).toISOString(), guest: guests[3] },
+  ];
   let messages: Message[] = WISHES.map((text, i) => ({
     kind: "message",
     id: `msg-${i}`,
@@ -280,7 +286,7 @@ export function createDemoApi(): Api {
     },
     async postTrend(input) {
       if (!me) throw new Error("Not registered");
-      const t: Trend = { id: uid(), guest_id: me.id, url: input.url, provider: input.provider, external_id: input.external_id, note: input.note?.trim() || null, video_path: null, thumb_path: null, width: null, height: null, duration: null, created_at: new Date().toISOString(), guest: me, hearts: 0, hearted: false };
+      const t: Trend = { id: uid(), guest_id: me.id, url: input.url, provider: input.provider, external_id: input.external_id, note: input.note?.trim() || null, video_path: null, thumb_path: null, width: null, height: null, duration: null, fetch_error: null, created_at: new Date().toISOString(), guest: me, hearts: 0, hearted: false, comments: 0 };
       trends = [t, ...trends];
       return t;
     },
@@ -293,6 +299,23 @@ export function createDemoApi(): Api {
     },
     async deleteTrend(id) {
       trends = trends.filter((t) => t.id !== id);
+    },
+    async listTrendComments(trendId) {
+      return comments.filter((c) => c.trend_id === trendId);
+    },
+    async postTrendComment(trendId, text) {
+      if (!me) throw new Error("Not registered");
+      const c: TrendComment = { id: uid(), trend_id: trendId, guest_id: me.id, text: text.trim(), created_at: new Date().toISOString(), guest: me };
+      comments = [...comments, c];
+      const t = trends.find((x) => x.id === trendId);
+      if (t) t.comments += 1;
+      return c;
+    },
+    async deleteTrendComment(id) {
+      const c = comments.find((x) => x.id === id);
+      comments = comments.filter((x) => x.id !== id);
+      const t = c && trends.find((x) => x.id === c.trend_id);
+      if (t) t.comments = Math.max(0, t.comments - 1);
     },
   };
 }

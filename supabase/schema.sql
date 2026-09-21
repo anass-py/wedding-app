@@ -390,3 +390,27 @@ end $$;
 alter table public.trends
   add column if not exists fetch_error text,
   add column if not exists fetch_attempted_at timestamptz;
+
+-- ── v3.5: comments on trends ─────────────────────────────────────────────────
+create table if not exists public.trend_comments (
+  id         uuid primary key default gen_random_uuid(),
+  trend_id   uuid not null references public.trends(id) on delete cascade,
+  guest_id   uuid not null references public.guests(id) on delete cascade,
+  text       text not null check (char_length(btrim(text)) between 1 and 300),
+  created_at timestamptz not null default now()
+);
+create index if not exists trend_comments_trend_idx on public.trend_comments (trend_id, created_at);
+alter table public.trend_comments enable row level security;
+drop policy if exists "tcomments: read all"   on public.trend_comments;
+drop policy if exists "tcomments: insert own" on public.trend_comments;
+drop policy if exists "tcomments: delete own" on public.trend_comments;
+create policy "tcomments: read all"   on public.trend_comments for select to authenticated using (true);
+create policy "tcomments: insert own" on public.trend_comments for insert to authenticated with check (guest_id = public.current_guest_id());
+create policy "tcomments: delete own" on public.trend_comments for delete to authenticated using (guest_id = public.current_guest_id());
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.trend_comments;
+  exception when duplicate_object then null;
+  end;
+end $$;

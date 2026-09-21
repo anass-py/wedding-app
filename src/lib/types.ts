@@ -64,10 +64,21 @@ export interface Trend {
   width: number | null;
   height: number | null;
   duration: number | null;
+  fetch_error: string | null;
   created_at: string;
   guest: Guest;
   hearts: number;
   hearted: boolean;
+  comments: number;
+}
+
+export interface TrendComment {
+  id: string;
+  trend_id: string;
+  guest_id: string;
+  text: string;
+  created_at: string;
+  guest: Guest;
 }
 
 /** What the wall shows: photos, videos and guestbook messages, newest first. */
@@ -86,6 +97,8 @@ export interface RealtimeHandlers {
   onTrendUpdate?: (trend: Trend) => void;
   onTrendDelete?: (id: string) => void;
   onTrendHeart?: (trendId: string, guestId: string, delta: 1 | -1) => void;
+  onTrendComment?: (comment: TrendComment) => void;
+  onTrendCommentDelete?: (trendId: string, id: string) => void;
 }
 
 export interface Api {
@@ -118,4 +131,7 @@ export interface Api {
   postTrend(input: { url: string; provider: Trend["provider"]; external_id: string | null; note?: string }): Promise<Trend>;
   setTrendHeart(trendId: string, hearted: boolean): Promise<void>;
   deleteTrend(id: string): Promise<void>;
+  listTrendComments(trendId: string): Promise<TrendComment[]>;
+  postTrendComment(trendId: string, text: string): Promise<TrendComment>;
+  deleteTrendComment(id: string): Promise<void>;
 }

@@ -27,6 +27,11 @@ export function useTrends(api: Api, ready: boolean) {
       onTrendInsert: (t) => setTrends((prev) => (prev.some((x) => x.id === t.id) ? prev : [t, ...prev])),
       onTrendUpdate: (t) => setTrends((prev) => prev.map((x) => (x.id === t.id ? { ...t, hearted: x.hearted } : x))),
       onTrendDelete: (id) => setTrends((prev) => prev.filter((t) => t.id !== id)),
+      onTrendComment: (c) => {
+        if (c.guest_id === myId.current) return; // counted when we post it
+        setTrends((prev) => prev.map((t) => (t.id === c.trend_id ? { ...t, comments: t.comments + 1 } : t)));
+      },
+      onTrendCommentDelete: (trendId) => setTrends((prev) => prev.map((t) => (t.id === trendId ? { ...t, comments: Math.max(0, t.comments - 1) } : t))),
       onTrendHeart: (trendId, guestId, delta) =>
         setTrends((prev) =>
           prev.map((t) => {
@@ -64,6 +69,8 @@ export function useTrends(api: Api, ready: boolean) {
     [api],
   );
 
+  const bumpComments = useCallback((trendId: string, delta: number) => setTrends((prev) => prev.map((t) => (t.id === trendId ? { ...t, comments: Math.max(0, t.comments + delta) } : t))), []);
+
   const removeTrend = useCallback(
     async (t: Trend) => {
       setTrends((prev) => prev.filter((x) => x.id !== t.id));
@@ -76,5 +83,5 @@ export function useTrends(api: Api, ready: boolean) {
     [api],
   );
 
-  return { trends, error, addTrend, toggleTrendHeart, removeTrend };
+  return { trends, error, addTrend, toggleTrendHeart, removeTrend, bumpComments };
 }
