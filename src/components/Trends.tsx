@@ -22,6 +22,28 @@ interface Props {
 export function Trends({ trends, api, meId, onHeart, onDelete, onOpenGuest, onComments }: Props) {
   const { t } = useI18n();
   const [sound, setSound] = useState(false); // once the guest asks for sound, keep it on for the next reels
+  const [hint, setHint] = useState(() => {
+    try {
+      return !localStorage.getItem("wedding.reels.hint");
+    } catch {
+      return true;
+    }
+  });
+  const dismissHint = () => {
+    if (!hint) return;
+    setHint(false);
+    try {
+      localStorage.setItem("wedding.reels.hint", "1");
+    } catch {
+      /* ignore */
+    }
+  };
+  useEffect(() => {
+    if (!hint) return;
+    const id = window.setTimeout(dismissHint, 6000);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hint]);
   if (trends.length === 0) {
     return (
       <div className="trends trends--empty">
@@ -32,7 +54,16 @@ export function Trends({ trends, api, meId, onHeart, onDelete, onOpenGuest, onCo
     );
   }
   return (
-    <div className="reels">
+    <div className="reels" onScroll={dismissHint}>
+      {hint && trends.length > 1 && (
+        <div className="reels__hint" aria-hidden="true">
+          <span className="reels__chevrons">
+            <Icon name="chevronUp" size={22} strokeWidth={2} />
+            <Icon name="chevronUp" size={22} strokeWidth={2} />
+          </span>
+          <span className="reels__hint-text">{t("swipeUp")}</span>
+        </div>
+      )}
       {trends.map((tr, i) => (
         <Reel key={tr.id} trend={tr} index={i} api={api} mine={tr.guest_id === meId} sound={sound} onSound={setSound} onHeart={onHeart} onDelete={onDelete} onOpenGuest={onOpenGuest} onComments={onComments} />
       ))}

@@ -11,7 +11,6 @@ import { Onboarding } from "./components/Onboarding";
 import { PhotoDetail } from "./components/PhotoDetail";
 import { ProfileSheet } from "./components/ProfileSheet";
 import { SkeletonGrid } from "./components/Skeleton";
-import { TopPhotos } from "./components/TopPhotos";
 import { Trends } from "./components/Trends";
 import { UploadSheet } from "./components/UploadSheet";
 import { Welcome } from "./components/Welcome";
@@ -21,11 +20,10 @@ import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { describeError, isSchemaOutOfDate } from "./lib/errors";
-import { topPhotos } from "./lib/ranking";
 import type { Guest, Message, Photo, Trend } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
-type Tab = "wall" | "top" | "trends";
+type Tab = "wall" | "trends";
 /** "Sara & Yassine" → ["Sara", "Yassine"] so the ampersand can be styled. */
 const coupleNames = WEDDING.couple.split(/\s*&\s*/).map((n) => n.trim()).filter(Boolean);
 
@@ -99,7 +97,6 @@ export default function App() {
 
   // Keep the detail view in sync with live heart/score updates.
   const selected = selectedId ? (photos.find((p) => p.id === selectedId) ?? null) : null;
-  const topIds = useMemo(() => new Set(topPhotos(photos, "all").map((p) => p.id)), [photos]);
 
   if (stage === "loading") {
     return (
@@ -193,7 +190,6 @@ export default function App() {
                     photos={photos}
                     urlFor={api.urlFor}
                     onSelect={(p) => setSelectedId(p.id)}
-                    highlight={topIds}
                     resetKey={wallReset}
                     pulse={pulse}
                     onHeart={toggleHeart}
@@ -222,7 +218,7 @@ export default function App() {
               </div>
             )}
           </>
-        ) : tab === "trends" ? (
+        ) : (
           <Trends
             trends={trends}
             api={api}
@@ -232,8 +228,6 @@ export default function App() {
             onOpenGuest={setGuestCard}
             onComments={(tr) => setCommentsFor(tr.id)}
           />
-        ) : (
-          <TopPhotos photos={photos} api={api} onSelect={(p) => setSelectedId(p.id)} />
         )}
       </main>
 
@@ -244,9 +238,6 @@ export default function App() {
           </button>
           <button className={"fab" + (!loading && photos.length === 0 ? " fab--invite" : "")} onClick={() => setUploadOpen(true)} aria-label={t("takePhoto")}>
             <Icon name="plus" size={28} strokeWidth={2.4} />
-          </button>
-          <button className={"nav__btn" + (tab === "top" ? " nav__btn--on" : "")} onClick={() => setTab("top")} aria-label={t("top")}>
-            <Icon name="star" size={24} fill={tab === "top"} strokeWidth={1.6} />
           </button>
           <button className={"nav__btn" + (tab === "trends" ? " nav__btn--on" : "")} onClick={() => setTab("trends")} aria-label={t("trends")}>
             <Icon name="reel" size={24} strokeWidth={tab === "trends" ? 2 : 1.6} />

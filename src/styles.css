@@ -829,3 +829,13 @@ img { display: block; }
 .comments__compose { display: flex; gap: 8px; align-items: center; padding-top: 6px; }
 .fab--small { width: 46px; height: 46px; margin: 0; box-shadow: none; flex-shrink: 0; }
 .fab--small:disabled { opacity: 0.4; }
+
+/* ── "swipe up" hint on the reels, first time only ────────── */
+.reels__hint { position: sticky; top: 0; height: 0; z-index: 4; pointer-events: none; }
+.reels__hint > * { position: absolute; left: 50%; transform: translateX(-50%); }
+.reels__chevrons { top: calc(100vh - env(safe-area-inset-bottom) - 400px); display: grid; color: rgba(255, 255, 255, 0.9); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)); animation: hintfade 6s ease-in-out both; }
+.reels__chevrons .icon { margin-top: -14px; animation: chevron 1.6s ease-in-out infinite; }
+.reels__chevrons .icon:first-child { animation-delay: 0.2s; opacity: 0.55; }
+.reels__hint-text { top: calc(100vh - env(safe-area-inset-bottom) - 362px); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); white-space: nowrap; animation: hintfade 6s ease-in-out both; }
+@keyframes chevron { 0%, 100% { transform: translateY(6px); opacity: 0.4; } 50% { transform: translateY(-6px); opacity: 1; } }
+@keyframes hintfade { 0% { opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }

@@ -354,7 +354,6 @@ export function PhotoDetail({ photo, photos, api, onClose, onNavigate, onHeart, 
               <span className="viewer__time">
                 {relativeTime(photo.created_at, t)}
                 {isVideo && ` · ${formatDuration(photo.duration)}`}
-                {photo.score && ` · ★ ${photo.score.score.toFixed(1)}`}
               </span>
             </span>
           </button>
