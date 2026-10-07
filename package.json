@@ -20,6 +20,7 @@
     "migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "schema:dev": "node --import tsx scripts/schema-dev.ts",
     "guests": "node --env-file-if-exists=.env --import tsx scripts/guests.ts",
+    "backup": "node --env-file-if-exists=.env --import tsx scripts/backup.ts",
     "trends": "node --env-file-if-exists=.env --import tsx scripts/trends.ts"
   },
   "dependencies": {

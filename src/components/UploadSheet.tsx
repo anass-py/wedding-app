@@ -5,7 +5,7 @@ import { buzz } from "../lib/haptics";
 import { describeError } from "../lib/errors";
 import { ImageError } from "../lib/image";
 import { parseTrendUrl } from "../lib/trends";
-import type { Api, Message, Photo, Trend } from "../lib/types";
+import type { Api, Photo, Trend } from "../lib/types";
 import { VideoError, isVideoFile } from "../lib/video";
 import { Camera, isCameraSupported } from "./Camera";
 import { Icon } from "./Icon";
@@ -16,7 +16,6 @@ interface Props {
   onError: (msg: string) => void;
   /** Called once with every photo/video that made it. */
   onDone: (photos: Photo[]) => void;
-  onMessage: (message: Message) => void;
   onTrend: (trend: Trend) => void;
 }
 
@@ -26,7 +25,7 @@ interface Picked {
   video: boolean;
 }
 
-export function UploadSheet({ api, onClose, onError, onDone, onMessage, onTrend }: Props) {
+export function UploadSheet({ api, onClose, onError, onDone, onTrend }: Props) {
   const { t } = useI18n();
   const cameraRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
@@ -35,8 +34,6 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage, onTrend 
   const [caption, setCaption] = useState("");
   const [progress, setProgress] = useState<{ i: number; n: number; p: number } | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [writing, setWriting] = useState(false);
-  const [text, setText] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
   const [trending, setTrending] = useState(false);
   const [trendUrl, setTrendUrl] = useState("");
@@ -57,19 +54,6 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage, onTrend 
     }
   };
 
-  const sendMessage = async () => {
-    if (!text.trim() || sendingMsg) return;
-    setSendingMsg(true);
-    try {
-      const m = await api.postMessage(text);
-      buzz([10, 40, 20]);
-      onMessage(m);
-      onClose();
-    } catch (e) {
-      onError(explain(e));
-      setSendingMsg(false);
-    }
-  };
   const inAppCamera = isCameraSupported();
 
   // Revoke preview URLs only when the sheet goes away (or an item is removed), never on every change.
@@ -164,28 +148,6 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage, onTrend 
               </button>
             </div>
           </div>
-        ) : writing ? (
-          <div className="compose">
-            <p className="compose__to">{t("composeTitle")}</p>
-            <textarea
-              className="input compose__text"
-              value={text}
-              placeholder={t("messagePlaceholder")}
-              maxLength={280}
-              rows={4}
-              autoFocus
-              onChange={(e) => setText(e.target.value)}
-            />
-            <div className="compose__meta muted small">{text.length} / 280</div>
-            <div className="sheet__actions">
-              <button className="btn btn--ghost" onClick={() => setWriting(false)} disabled={sendingMsg}>
-                {t("cancel")}
-              </button>
-              <button className="btn btn--primary" onClick={sendMessage} disabled={!text.trim() || sendingMsg}>
-                {sendingMsg ? t("sending") : t("send")}
-              </button>
-            </div>
-          </div>
         ) : picked.length === 0 ? (
           <div className="sheet__choices">
             {inAppCamera ? (
@@ -219,12 +181,6 @@ export function UploadSheet({ api, onClose, onError, onDone, onMessage, onTrend 
                 <Icon name="image" size={24} />
               </span>
               {t("fromGallery")}
-            </button>
-            <button className="bigbtn" onClick={() => setWriting(true)}>
-              <span className="bigbtn__icon">
-                <Icon name="quill" size={24} />
-              </span>
-              {t("writeMessage")}
             </button>
             <button className="bigbtn" onClick={() => setTrending(true)}>
               <span className="bigbtn__icon">

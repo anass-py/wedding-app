@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../i18n";
 import { Icon } from "./Icon";
-import type { Message, Photo } from "../lib/types";
+import type { Photo } from "../lib/types";
 
 interface Props {
   photos?: Photo[];
-  message?: Message;
   /** A trend was added: show its note/link with the trend copy. */
   trendNote?: string | null;
   urlFor: (path: string) => string;
@@ -16,7 +15,7 @@ const HOLD_MS = 2300;
 const OUT_MS = 550;
 
 /** Full-screen "Posted!" moment: photo springs in, sparks burst, then it flies to the wall. */
-export function Celebration({ photos = [], message, trendNote, urlFor, onDone }: Props) {
+export function Celebration({ photos = [], trendNote, urlFor, onDone }: Props) {
   const { t } = useI18n();
   const [phase, setPhase] = useState<"in" | "out">("in");
 
@@ -72,13 +71,6 @@ export function Celebration({ photos = [], message, trendNote, urlFor, onDone }:
             <Icon name="reel" size={44} />
             {trendNote && <p className="note__text">{trendNote}</p>}
           </div>
-        ) : message ? (
-          <div className="celebrate__photo celebrate__note">
-            <span className="note__quote" aria-hidden="true">
-              “
-            </span>
-            <p className="note__text">{message.text}</p>
-          </div>
         ) : (
           <div className={"celebrate__photo" + (portrait ? "" : " celebrate__photo--wide")}>
             <img src={urlFor(hero.thumb_path)} alt="" draggable={false} />
@@ -86,9 +78,9 @@ export function Celebration({ photos = [], message, trendNote, urlFor, onDone }:
           </div>
         )}
       </div>
-      <h2 className="celebrate__title">{trendNote !== undefined ? t("trendSent") : message ? t("messageSent") : t("posted")}</h2>
+      <h2 className="celebrate__title">{trendNote !== undefined ? t("trendSent") : t("posted")}</h2>
       <p className="celebrate__sub">
-        {trendNote !== undefined ? t("trendCelebrate") : message ? t("messageCelebrate") : photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}
+        {trendNote !== undefined ? t("trendCelebrate") : photos.length > 1 ? t("celebrateMany", { n: photos.length }) : t("celebrateOne")}
       </p>
     </div>
   );

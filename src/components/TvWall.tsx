@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WEDDING } from "../config";
 import { createApi } from "../lib/api";
-import type { Message, Photo } from "../lib/types";
+import type { Photo } from "../lib/types";
 import { Avatar } from "./Avatar";
 
 const SLIDE_MS = 7000;
@@ -11,7 +11,6 @@ const LOOP_SIZE = 80; // newest N photos cycle; new arrivals jump the queue
 
 interface Slide {
   photo?: Photo;
-  message?: Message;
   isNew: boolean;
 }
 
@@ -22,11 +21,6 @@ interface Slide {
 export function TvWall() {
   const api = useMemo(createApi, []);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const messagesRef = useRef<Message[]>([]);
-  messagesRef.current = messages;
-  const msgCursor = useRef(-1);
-  const sinceMessage = useRef(0);
   const [slide, setSlide] = useState<Slide | null>(null);
   const [qr, setQr] = useState("");
   const [paused, setPaused] = useState(false);
@@ -51,11 +45,9 @@ export function TvWall() {
     let cancelled = false;
     api
       .init()
-      .then(() => Promise.all([api.listPhotos(), api.listMessages().catch(() => [] as Message[])]))
-      .then(([list, msgs]) => {
-        if (cancelled) return;
-        setPhotos(list);
-        setMessages(msgs);
+      .then(() => api.listPhotos())
+      .then((list) => {
+        if (!cancelled) setPhotos(list);
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
     const unsubscribe = api.subscribe({
@@ -67,8 +59,6 @@ export function TvWall() {
       onHeart: (photoId, _guest, delta) =>
         setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, hearts: Math.max(0, p.hearts + delta) } : p))),
       onScore: (photoId, score) => setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, score } : p))),
-      onMessageInsert: (m) => setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [m, ...prev])),
-      onMessageDelete: (id) => setMessages((prev) => prev.filter((m) => m.id !== id)),
     });
     return () => {
       cancelled = true;
@@ -80,14 +70,6 @@ export function TvWall() {
     const fresh = queue.current.shift();
     if (fresh) {
       setSlide({ photo: fresh, isNew: true });
-      return;
-    }
-    // A guestbook message every 4th slide, when there are any.
-    const msgs = messagesRef.current;
-    if (msgs.length > 0 && ++sinceMessage.current >= 4) {
-      sinceMessage.current = 0;
-      msgCursor.current = (msgCursor.current + 1) % msgs.length;
-      setSlide({ message: msgs[msgCursor.current], isNew: false });
       return;
     }
     const loop = photosRef.current.slice(0, LOOP_SIZE);
@@ -121,20 +103,6 @@ export function TvWall() {
 
   return (
     <div className="tv" onClick={() => setPaused((p) => !p)}>
-      {slide?.message && (
-        <div key={"m" + slide.message.id} className="tv__slide">
-          <div className="tv__note">
-            <span className="note__quote" aria-hidden="true">
-              “
-            </span>
-            <p className="tv__note-text">{slide.message.text}</p>
-            <div className="tv__note-by">
-              <Avatar guest={slide.message.guest} urlFor={api.urlFor} size={44} />
-              <span>{slide.message.guest.name}</span>
-            </div>
-          </div>
-        </div>
-      )}
       {slide?.photo && (
         <>
           <div key={"bg" + slide.photo.id} className="tv__bg" style={{ backgroundImage: `url(${api.urlFor(slide.photo.thumb_path)})` }} />
