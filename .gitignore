@@ -9,3 +9,4 @@ qr.svg
 .DS_Store
 .compare
 backup/
+*.tsbuildinfo
