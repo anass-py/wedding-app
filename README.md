@@ -151,6 +151,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for the dev/production workflow (branches, 
 - [ ] Tested from two phones: join, post from camera, post from gallery, heart, see it appear live on the other phone.
 - [ ] `npm run worker` running on a laptop at home (or the GitHub Action enabled) — scores photos, converts videos.
 - [ ] Supabase on Pro if guests will post videos; anonymous rate limit raised.
+- [ ] After the party (and once a night during it): `npm run backup -- --download ~/Mariage` — a full copy of every photo/video on your disk; `npm run backup` alone shows how much space is used.
 - [ ] Ask the venue for the WiFi password to put on the cards — uploads are much faster than on cellular.
 
 ## How it's built

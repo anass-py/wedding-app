@@ -4,7 +4,6 @@ import { Avatar } from "./components/Avatar";
 import { Celebration } from "./components/Celebration";
 import { CommentsSheet } from "./components/CommentsSheet";
 import { GuestCard } from "./components/GuestCard";
-import { Guestbook } from "./components/Guestbook";
 import { Icon } from "./components/Icon";
 import { Masonry } from "./components/Masonry";
 import { Onboarding } from "./components/Onboarding";
@@ -14,13 +13,12 @@ import { SkeletonGrid } from "./components/Skeleton";
 import { Trends } from "./components/Trends";
 import { UploadSheet } from "./components/UploadSheet";
 import { Welcome } from "./components/Welcome";
-import { useMessages } from "./hooks/useMessages";
 import { useTrends } from "./hooks/useTrends";
 import { usePhotos } from "./hooks/usePhotos";
 import { useI18n } from "./i18n";
 import { createApi } from "./lib/api";
 import { describeError, isSchemaOutOfDate } from "./lib/errors";
-import type { Guest, Message, Photo, Trend } from "./lib/types";
+import type { Guest, Photo, Trend } from "./lib/types";
 
 type Stage = "loading" | "onboarding" | "ready" | "error";
 type Tab = "wall" | "trends";
@@ -46,8 +44,6 @@ export default function App() {
   const [pulse, setPulse] = useState<{ key: number; photoId: string } | null>(null);
   const onRemoteHeart = useCallback((photoId: string) => setPulse({ key: Date.now() + Math.random(), photoId }), []);
   const { photos, loading, error, addPhoto, toggleHeart, removePhoto } = usePhotos(api, stage === "ready", onRemoteHeart);
-  const { messages, addMessage, toggleMessageHeart, removeMessage } = useMessages(api, stage === "ready");
-  const [celebratingMessage, setCelebratingMessage] = useState<Message | null>(null);
   const { trends, addTrend, toggleTrendHeart, removeTrend, bumpComments } = useTrends(api, stage === "ready");
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
   const commentsTrend = commentsFor ? (trends.find((x) => x.id === commentsFor) ?? null) : null;
@@ -173,39 +169,14 @@ export default function App() {
               <SkeletonGrid />
             ) : (
               <div className="wall">
-                <Guestbook
-                  layout="column"
-                  messages={messages}
+                <Masonry
+                  photos={photos}
                   urlFor={api.urlFor}
-                  meId={guest?.id ?? null}
-                  onHeart={toggleMessageHeart}
-                  onDelete={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
-                  onOpenGuest={setGuestCard}
+                  onSelect={(p) => setSelectedId(p.id)}
+                  resetKey={wallReset}
+                  pulse={pulse}
+                  onHeart={toggleHeart}
                 />
-                <div className="wall__divider" aria-hidden="true">
-                  <span>✦</span>
-                </div>
-                <div className="wall__photos">
-                  <Masonry
-                    photos={photos}
-                    urlFor={api.urlFor}
-                    onSelect={(p) => setSelectedId(p.id)}
-                    resetKey={wallReset}
-                    pulse={pulse}
-                    onHeart={toggleHeart}
-                    top={
-                      <Guestbook
-                        layout="strip"
-                        messages={messages}
-                        urlFor={api.urlFor}
-                        meId={guest?.id ?? null}
-                        onHeart={toggleMessageHeart}
-                        onDelete={(m) => window.confirm(t("confirmDeleteMessage")) && void removeMessage(m)}
-                        onOpenGuest={setGuestCard}
-                      />
-                    }
-                  />
-                </div>
               </div>
             )}
             {!loading && photos.length === 0 && (
@@ -264,7 +235,6 @@ export default function App() {
           onClose={() => setUploadOpen(false)}
           onError={showToast}
           onDone={(batch) => setCelebrating(batch)}
-          onMessage={(m) => setCelebratingMessage(m)}
           onTrend={(tr) => setCelebratingTrend(tr)}
         />
       )}
@@ -280,18 +250,6 @@ export default function App() {
             addTrend(celebratingTrend);
             setCelebratingTrend(null);
             setTab("trends");
-          }}
-        />
-      )}
-      {celebratingMessage && (
-        <Celebration
-          message={celebratingMessage}
-          urlFor={api.urlFor}
-          onDone={() => {
-            addMessage(celebratingMessage);
-            setCelebratingMessage(null);
-            setTab("wall");
-            setWallReset((k) => k + 1);
           }}
         />
       )}
