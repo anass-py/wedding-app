@@ -127,6 +127,11 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     };
   }
 
+  /** Deleted user (FK), or a request without a valid login (RLS / storage 403). */
+  function isIdentityError(e: { code?: string; message?: string }) {
+    return e.code === "23503" || e.code === "42501" || /row-level security|Upload rejected \((401|403)\)|No session/i.test(e.message ?? "");
+  }
+
   async function freshAnonymousSession() {
     const { data: anon, error } = await sb.auth.signInAnonymously();
     if (error) throw error;
@@ -257,6 +262,34 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     })();
   }
 
+  async function postMedia(file: File, caption: string | undefined, onProgress?: (f: number) => void): Promise<Photo> {
+    if (!guest || !authId) throw new Error("Not registered");
+    const base = `${authId}/${uid()}`;
+    const thumb_path = `${base}_t.jpg`;
+    let row: Record<string, unknown>;
+    if (isVideoFile(file)) {
+      const v = await processVideo(file);
+      const path = `${base}.${videoExt(file)}`;
+      await upload(thumb_path, v.poster);
+      await upload(path, file, onProgress);
+      row = { kind: "video", duration: Math.round(v.duration * 10) / 10, path, thumb_path, width: v.width, height: v.height };
+    } else {
+      const processed = await processImage(file);
+      const path = `${base}.jpg`;
+      await Promise.all([upload(path, processed.full, onProgress), upload(thumb_path, processed.thumb)]);
+      row = { kind: "photo", path, thumb_path, width: processed.width, height: processed.height };
+    }
+    const { data, error } = await sb
+      .from("photos")
+      .insert({ guest_id: guest.id, caption: caption?.trim() || null, ...row })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const photo = await fetchOne(data.id);
+    if (!photo) throw new Error("Photo vanished after insert");
+    return photo;
+  }
+
   async function fetchOne(id: string): Promise<Photo | null> {
     const { data, error } = await sb.from("photos").select(PHOTO_SELECT).eq("id", id).maybeSingle();
     if (error) throw error;
@@ -282,29 +315,25 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async createGuest(name, avatar) {
-      if (!authId) throw new Error("init() first");
-      let avatar_path: string | null = null;
-      if (avatar) {
-        avatar_path = `${authId}/avatar-${Date.now()}.jpg`;
-        await upload(avatar_path, avatar);
-      }
-      let { data, error } = await sb
-        .from("guests")
-        .insert({ auth_id: authId, name: name.trim(), avatar_path })
-        .select(GUEST_SELECT)
-        .single();
-      if (error?.code === "23503") {
-        // Session belonged to a deleted user: get a new identity and try once more.
+      // The saved login can be stale (an outage, another tab): sign up with the identity
+      // the requests will actually carry, and start over once if the server refuses it.
+      authId = (await ensureSession()).user.id;
+      const attempt = async () => {
+        let avatar_path: string | null = null;
+        if (avatar) {
+          avatar_path = `${authId}/avatar-${Date.now()}.jpg`;
+          await upload(avatar_path, avatar);
+        }
+        return sb.from("guests").insert({ auth_id: authId, name: name.trim(), avatar_path }).select(GUEST_SELECT).single();
+      };
+      let res = await attempt().catch((e: unknown) => ({ data: null, error: e as { code?: string; message?: string } }));
+      if (res.error && isIdentityError(res.error)) {
         await sb.auth.signOut({ scope: "local" }).catch(() => undefined);
         authId = (await freshAnonymousSession()).user.id;
-        ({ data, error } = await sb
-          .from("guests")
-          .insert({ auth_id: authId, name: name.trim(), avatar_path: null })
-          .select(GUEST_SELECT)
-          .single());
+        res = await attempt();
       }
-      if (error) throw error;
-      guest = toGuest(data as GuestRow);
+      if (res.error) throw res.error;
+      guest = toGuest(res.data as GuestRow);
       registerDevice();
       return guest;
     },
@@ -423,31 +452,13 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async uploadMedia(file, caption, onProgress) {
-      if (!guest || !authId) throw new Error("Not registered");
-      const base = `${authId}/${uid()}`;
-      const thumb_path = `${base}_t.jpg`;
-      let row: Record<string, unknown>;
-      if (isVideoFile(file)) {
-        const v = await processVideo(file);
-        const path = `${base}.${videoExt(file)}`;
-        await upload(thumb_path, v.poster);
-        await upload(path, file, onProgress);
-        row = { kind: "video", duration: Math.round(v.duration * 10) / 10, path, thumb_path, width: v.width, height: v.height };
-      } else {
-        const processed = await processImage(file);
-        const path = `${base}.jpg`;
-        await Promise.all([upload(path, processed.full, onProgress), upload(thumb_path, processed.thumb)]);
-        row = { kind: "photo", path, thumb_path, width: processed.width, height: processed.height };
+      try {
+        return await postMedia(file, caption, onProgress);
+      } catch (e) {
+        if (!isIdentityError(e as { code?: string; message?: string })) throw e;
+        await sb.auth.refreshSession();
+        return postMedia(file, caption, onProgress);
       }
-      const { data, error } = await sb
-        .from("photos")
-        .insert({ guest_id: guest.id, caption: caption?.trim() || null, ...row })
-        .select("id")
-        .single();
-      if (error) throw error;
-      const photo = await fetchOne(data.id);
-      if (!photo) throw new Error("Photo vanished after insert");
-      return photo;
     },
 
     async setHeart(photoId, hearted) {
